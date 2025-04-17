@@ -8,6 +8,7 @@ export class ApiInspectorContainer extends HTMLElement {
     this.minimized = false;
     this.position = { left: 20, top: 20 };
     this.size = { width: 400, height: 500 };
+    this.previousSize = null; // 保存最小化前的尺寸
     
     // 从localStorage加载位置和大小
     this.loadState();
@@ -76,37 +77,36 @@ export class ApiInspectorContainer extends HTMLElement {
   }
   
   render() {
-    const containerStyle = `
-      position: fixed;
-      z-index: 9999;
-      width: ${this.minimized ? '200px' : `${this.size.width}px`};
-      height: ${this.minimized ? '40px' : `${this.size.height}px`};
-      background-color: var(--background-color);
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      resize: ${this.minimized ? 'none' : 'both'};
-      min-width: 320px;
-      min-height: ${this.minimized ? '40px' : '300px'};
-      max-width: 800px;
-      max-height: 800px;
-      transition: width 0.3s ease, height 0.3s ease;
-    `;
-    
     this.shadowRoot.innerHTML = `
       <style>
         ${Styles.cssText}
         
         .container {
-          ${containerStyle}
+          position: fixed;
+          z-index: 9999;
+          background-color: var(--background-color);
+          border-radius: 8px;
+          box-shadow: var(--shadow);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          min-width: 200px;
+          max-width: 800px;
+          max-height: 800px;
+          transition: width 0.3s ease, height 0.3s ease;
         }
         
         .container.minimized {
           width: 200px !important;
           height: 40px !important;
           resize: none;
+        }
+        
+        .container:not(.minimized) {
+          width: ${this.size.width}px;
+          height: ${this.size.height}px;
+          resize: both;
+          min-height: 300px;
         }
         
         .content {
@@ -158,11 +158,28 @@ export class ApiInspectorContainer extends HTMLElement {
     const content = this.shadowRoot.querySelector('.content');
     
     if (this.minimized) {
+      // 保存当前尺寸，以便稍后恢复
+      this.previousSize = { 
+        width: this.size.width, 
+        height: this.size.height 
+      };
       container.classList.add('minimized');
       content.style.display = 'none';
     } else {
       container.classList.remove('minimized');
       content.style.display = '';
+      
+      // 恢复上次的尺寸
+      if (this.previousSize) {
+        this.size.width = this.previousSize.width;
+        this.size.height = this.previousSize.height;
+        container.style.width = `${this.size.width}px`;
+        container.style.height = `${this.size.height}px`;
+      } else {
+        // 如果没有保存的尺寸，使用默认值
+        container.style.width = `${this.size.width}px`;
+        container.style.height = `${this.size.height}px`;
+      }
     }
     
     // 发送事件通知header更新最小化按钮

@@ -69,7 +69,7 @@ export class ApiInspectorFooter extends HTMLElement {
       <div class="footer">
         <div class="status">
           <span class="status-dot"></span>
-          活跃 | 当前页面: ${location.pathname}
+          当前页面: ${location.pathname + location.hash}
         </div>
         <div class="actions">
           <button class="action" id="export-btn">

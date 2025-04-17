@@ -91,7 +91,7 @@ export class ApiInspectorHeader extends HTMLElement {
       <div class="header" id="header" part="header">
         <div class="title">
           ${getSvgIcon('info')}
-          <span>API Inspector</span>
+          <span>Stap Plugin</span>
         </div>
         <div class="controls">
           <button class="button" id="minimize-button">

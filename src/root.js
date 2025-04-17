@@ -1,5 +1,3 @@
-
-
 // src/root.js
 import './styles.js';
 import './api-inspector.js';
@@ -45,7 +43,7 @@ class ApiInspector extends HTMLElement {
   
   _renderRequestItems() {
     if (this.requests.length === 0) {
-      return '<div class="empty-message">暂无API请求数据</div>';
+      return '<div class="empty-message"></div>';
     }
     
     return this.requests.map((request, index) => `
