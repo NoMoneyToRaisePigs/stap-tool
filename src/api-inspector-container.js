@@ -17,13 +17,23 @@ export class ApiInspectorContainer extends HTMLElement {
   }
   
   connectedCallback() {
-    this.setupDragAndResize();
+    // 确保元素已添加到DOM
+    requestAnimationFrame(() => {
+      this.setupDragAndResize();
+      this.applyPosition();
+    });
+  }
+  
+  // 应用保存的位置到实际样式
+  applyPosition() {
+    // 直接设置容器元素样式
+    this.style.position = 'fixed';
+    this.style.left = `${this.position.left}px`;
+    this.style.top = `${this.position.top}px`;
+    this.style.right = '';
+    this.style.bottom = '';
     
-    // 如果没有定位，则初始化到右下角
-    if (!this.style.left && !this.style.top) {
-      this.style.left = `${this.position.left}px`;
-      this.style.top = `${this.position.top}px`;
-    }
+    console.log('应用位置:', this.position);
   }
   
   loadState() {
@@ -62,13 +72,12 @@ export class ApiInspectorContainer extends HTMLElement {
       size: this.size
     };
     localStorage.setItem('api-inspector-state', JSON.stringify(state));
+    console.log('状态已保存:', state);
   }
   
   render() {
     const containerStyle = `
       position: fixed;
-      left: ${this.position.left}px;
-      top: ${this.position.top}px;
       z-index: 9999;
       width: ${this.minimized ? '200px' : `${this.size.width}px`};
       height: ${this.minimized ? '40px' : `${this.size.height}px`};
@@ -83,7 +92,7 @@ export class ApiInspectorContainer extends HTMLElement {
       min-height: ${this.minimized ? '40px' : '300px'};
       max-width: 800px;
       max-height: 800px;
-      transition: all 0.3s ease;
+      transition: width 0.3s ease, height 0.3s ease;
     `;
     
     this.shadowRoot.innerHTML = `
@@ -105,6 +114,11 @@ export class ApiInspectorContainer extends HTMLElement {
           display: flex;
           flex-direction: column;
           overflow: hidden;
+        }
+        
+        .container.dragging {
+          opacity: 0.9;
+          transition: none;
         }
       </style>
       
@@ -153,6 +167,39 @@ export class ApiInspectorContainer extends HTMLElement {
     this.saveState();
   }
   
+  // 更新组件位置的方法
+  updatePosition(x, y) {
+    // 边界检查
+    const minVisible = 20;
+    const maxX = window.innerWidth - minVisible;
+    const maxY = window.innerHeight - minVisible;
+    const width = this.offsetWidth || this.size.width;
+    const height = this.offsetHeight || this.size.height;
+    
+    // 应用边界限制
+    const safeX = Math.min(maxX, Math.max(minVisible - width, x));
+    const safeY = Math.min(maxY, Math.max(minVisible - height, y));
+    
+    // 更新内部存储的位置
+    this.position = { 
+      left: safeX,
+      top: safeY
+    };
+    
+    // 直接更新host元素样式
+    this.style.position = 'fixed';
+    this.style.left = `${safeX}px`;
+    this.style.top = `${safeY}px`;
+    this.style.right = '';
+    this.style.bottom = '';
+    
+    // 保存状态
+    this.saveState();
+    
+    console.log('位置已更新:', this.position);
+    return this.position;
+  }
+  
   setupDragAndResize() {
     const container = this.shadowRoot.getElementById('container');
     
@@ -167,15 +214,26 @@ export class ApiInspectorContainer extends HTMLElement {
     
     resizeObserver.observe(container);
     
-    // 拖拽功能在header组件中实现，这里仅监听position变化
+    // 拖拽功能在header组件中实现，这里监听position变化并更新样式
     this.addEventListener('position-changed', (e) => {
-      // 更新位置存储
-      this.position = { 
-        left: e.detail.x,
-        top: e.detail.y
-      };
-      this.saveState();
+      // 获取新位置
+      const x = e.detail.x;
+      const y = e.detail.y;
+      
+      // 更新位置和样式
+      this.updatePosition(x, y);
     });
+  }
+  
+  // 辅助方法：获取元素当前位置
+  getPosition() {
+    const rect = this.getBoundingClientRect();
+    return {
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height
+    };
   }
 }
 
