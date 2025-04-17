@@ -1,31 +1,45 @@
 // src/api-sensitive-panel.js
-import { Styles, getSvgIcon, fetchSensitiveFields } from './styles.js';
+import { Styles, getSvgIcon } from './styles.js';
+import { fetchSensitiveFieldsData } from './utils/api.js';
 
 export class ApiSensitivePanel extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.fields = [];
+    this.aggregatedFields = []; // 存储聚合后的字段数据
     this.loading = true;
     this.error = null;
     this.apiUrl = '';
   }
   
   static get observedAttributes() {
-    return ['api-url'];
+    return ['api-url', 'url'];
   }
   
   attributeChangedCallback(name, oldValue, newValue) {
-    if (name === 'api-url' && newValue && newValue !== oldValue) {
+    if ((name === 'api-url' || name === 'url') && newValue && newValue !== oldValue) {
       this.apiUrl = newValue;
+      console.log(`${name} 属性已更新:`, newValue);
       this.loadSensitiveFields();
     }
   }
   
   // 设置API URL
   set url(value) {
+    if (!value) return;
+    console.log('通过setter设置URL:', value);
+    
+    // 确保属性也被设置，保持一致性
+    if (this.getAttribute('api-url') !== value) {
+      this.setAttribute('api-url', value);
+    }
+    
     this.apiUrl = value;
     this.loadSensitiveFields();
+  }
+  
+  get url() {
+    return this.apiUrl;
   }
   
   connectedCallback() {
@@ -115,13 +129,18 @@ export class ApiSensitivePanel extends HTMLElement {
         .action.primary:hover {
           background-color: var(--secondary-color);
         }
+        
+        .section-divider {
+          margin: 16px 0;
+          border-top: 1px solid var(--border-color);
+        }
       </style>
       
       <div class="sensitive-panel">
         ${this.loading ? this._renderLoading() : ''}
         ${this.error ? this._renderError() : ''}
-        ${!this.loading && !this.error && this.fields.length === 0 ? this._renderEmpty() : ''}
-        ${!this.loading && !this.error && this.fields.length > 0 ? this._renderFields() : ''}
+        ${!this.loading && !this.error && this.aggregatedFields.length === 0 ? this._renderEmpty() : ''}
+        ${!this.loading && !this.error && this.aggregatedFields.length > 0 ? this._renderFields() : ''}
       </div>
     `;
     
@@ -159,13 +178,14 @@ export class ApiSensitivePanel extends HTMLElement {
   _renderFields() {
     return `
       <div class="sensitive-list" id="sensitive-fields-list">
-        ${this.fields.map(field => `
-          <api-sensitive-field
-            name="${field.name}"
-            path="${field.path}"
-            is-sensitive="${field.isSensitive}"
-            description="${field.description || ''}"
-          ></api-sensitive-field>
+        ${this.aggregatedFields.map((group, index) => `
+          <div class="field-group" data-url="${group.feignRequestUrl}">
+            <api-sensitive-field
+              feign-request-url="${group.feignRequestUrl}"
+              fields='${JSON.stringify(group.fields)}'
+            ></api-sensitive-field>
+            ${index < this.aggregatedFields.length - 1 ? '<div class="section-divider"></div>' : ''}
+          </div>
         `).join('')}
       </div>
       
@@ -197,30 +217,37 @@ export class ApiSensitivePanel extends HTMLElement {
     
     // 监听敏感字段组件事件
     this.shadowRoot.addEventListener('sensitive-toggle', (e) => {
-      const { field } = e.detail;
-      const index = this.fields.findIndex(f => f.name === field.name && f.path === field.path);
+      const { fieldId, isSensitive } = e.detail;
       
-      if (index >= 0) {
-        this.fields[index].isSensitive = field.isSensitive;
-      }
-    });
-    
-    this.shadowRoot.addEventListener('field-filter', (e) => {
-      const { field } = e.detail;
-      alert(`字段 "${field.name}" 已设置为过滤处理`);
+      // 更新聚合数据中的敏感状态
+      this.aggregatedFields.forEach(group => {
+        const field = group.fields.find(f => f.id === fieldId);
+        if (field) {
+          field.isSensitive = isSensitive;
+          field.status = isSensitive ? 'CONFIRMED' : 'PENDING';
+        }
+      });
+      
+      // 更新敏感字段统计
+      this.updateSensitiveCount();
     });
   }
   
   loadSensitiveFields() {
-    if (!this.apiUrl) return;
+    if (!this.apiUrl) {
+      console.error('No API URL provided to load sensitive fields');
+      return;
+    }
     
+    console.log('开始加载敏感字段数据:', this.apiUrl);
     this.loading = true;
     this.error = null;
     this.render();
     
-    fetchSensitiveFields(this.apiUrl)
-      .then(fields => {
-        this.fields = fields;
+    fetchSensitiveFieldsData(this.apiUrl)
+      .then(data => {
+        console.log('获取到敏感字段数据:', data);
+        this.aggregatedFields = data;
         this.loading = false;
         this.render();
         
@@ -228,6 +255,7 @@ export class ApiSensitivePanel extends HTMLElement {
         this.updateSensitiveCount();
       })
       .catch(error => {
+        console.error('加载敏感字段数据失败:', error);
         this.loading = false;
         this.error = error.message || '获取敏感字段失败';
         this.render();
@@ -235,7 +263,11 @@ export class ApiSensitivePanel extends HTMLElement {
   }
   
   updateSensitiveCount() {
-    const sensitiveCount = this.fields.filter(f => f.isSensitive).length;
+    // 计算所有已确认的敏感字段数量
+    let sensitiveCount = 0;
+    this.aggregatedFields.forEach(group => {
+      sensitiveCount += group.fields.filter(field => field.isSensitive).length;
+    });
     
     this.dispatchEvent(new CustomEvent('sensitive-count-updated', {
       bubbles: true,
@@ -246,6 +278,22 @@ export class ApiSensitivePanel extends HTMLElement {
   
   saveSettings() {
     // 这里应该发送请求到后端保存敏感字段设置
+    // 收集所有需要更新的字段
+    const fieldsToUpdate = [];
+    this.aggregatedFields.forEach(group => {
+      group.fields.forEach(field => {
+        fieldsToUpdate.push({
+          id: field.id,
+          path: field.path,
+          status: field.status,
+          feignRequestUrl: group.feignRequestUrl
+        });
+      });
+    });
+    
+    // 输出到控制台
+    console.log('将保存以下敏感字段设置:', fieldsToUpdate);
+    
     // 模拟一个成功操作
     setTimeout(() => {
       alert('敏感字段设置已保存');

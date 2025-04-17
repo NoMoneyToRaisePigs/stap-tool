@@ -423,6 +423,8 @@ export class ApiRequestItem extends HTMLElement {
   }
   
   _analyzeSensitiveData() {
+    console.log('分析敏感字段开始:', this._request.url);
+    
     // 添加敏感字段标签
     if (!this._request.sensitivePanelActive) {
       this._request.sensitivePanelActive = true;
@@ -430,6 +432,7 @@ export class ApiRequestItem extends HTMLElement {
     }
     
     // 触发敏感字段分析
+    console.log('触发analyze-sensitive事件');
     this.dispatchEvent(new CustomEvent('analyze-sensitive', {
       bubbles: true,
       composed: true,
@@ -442,6 +445,7 @@ export class ApiRequestItem extends HTMLElement {
     // 自动切换到敏感字段标签
     this.activeTab = 'sensitive';
     this._updateActiveTab();
+    console.log('已切换到敏感字段标签');
   }
 }
 

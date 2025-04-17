@@ -112,20 +112,49 @@ class ApiInspector extends HTMLElement {
     // 监听敏感字段分析事件
     this.shadowRoot.addEventListener('analyze-sensitive', (e) => {
       const { request, apiUrl } = e.detail;
-      const requestItem = this.shadowRoot.querySelector(`#request-${this.requests.indexOf(request)}`);
+      console.log('收到敏感字段分析事件:', { request, apiUrl });
+      
+      // 找到请求所在的索引
+      const requestIndex = this.requests.indexOf(request);
+      console.log('请求索引:', requestIndex);
+      
+      if (requestIndex === -1) {
+        console.error('未找到请求对象在数组中的位置');
+        return;
+      }
+      
+      const requestItem = this.shadowRoot.querySelector(`#request-${requestIndex}`);
       
       if (requestItem) {
+        console.log('找到对应请求项元素:', requestItem.id);
+        
+        // 创建一个新的敏感字段面板
         const sensitivePanel = document.createElement('api-sensitive-panel');
-        sensitivePanel.slot = 'sensitive-panel';
-        sensitivePanel.url = apiUrl;
+        sensitivePanel.setAttribute('slot', 'sensitive-panel');
+        
+        // 确保API URL是有效的
+        const normalizedApiUrl = apiUrl || '/api/unknown'; // 提供一个默认值
+        console.log('设置API URL:', normalizedApiUrl);
+        sensitivePanel.setAttribute('api-url', normalizedApiUrl);
+        
+        // 直接设置url属性（为了兼容性）
+        setTimeout(() => {
+          sensitivePanel.url = normalizedApiUrl;
+          console.log('通过属性设置了URL');
+        }, 0);
         
         // 删除已有的敏感面板
         const existingPanel = requestItem.querySelector('api-sensitive-panel');
         if (existingPanel) {
           existingPanel.remove();
+          console.log('移除已有敏感面板');
         }
         
+        // 添加新面板
         requestItem.appendChild(sensitivePanel);
+        console.log('已添加新的敏感面板');
+      } else {
+        console.error('未找到对应的请求项元素');
       }
     });
   }

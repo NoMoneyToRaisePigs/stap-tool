@@ -5,40 +5,27 @@ export class ApiSensitiveField extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this._field = {
-      name: '',
-      path: '',
-      isSensitive: false,
-      description: ''
-    };
+    this.feignRequestUrl = '';
+    this.fields = [];
   }
   
   static get observedAttributes() {
-    return ['name', 'path', 'is-sensitive', 'description'];
+    return ['feign-request-url', 'fields'];
   }
   
   attributeChangedCallback(name, oldValue, newValue) {
-    if (name === 'name') {
-      this._field.name = newValue;
-    } else if (name === 'path') {
-      this._field.path = newValue;
-    } else if (name === 'is-sensitive') {
-      this._field.isSensitive = newValue === 'true';
-    } else if (name === 'description') {
-      this._field.description = newValue;
+    if (name === 'feign-request-url') {
+      this.feignRequestUrl = newValue;
+    } else if (name === 'fields') {
+      try {
+        this.fields = JSON.parse(newValue);
+      } catch (e) {
+        console.error('Invalid fields data:', e);
+        this.fields = [];
+      }
     }
     
     this.render();
-  }
-  
-  // 通过属性设置字段数据
-  set field(data) {
-    this._field = { ...this._field, ...data };
-    this.render();
-  }
-  
-  get field() {
-    return this._field;
   }
   
   connectedCallback() {
@@ -46,11 +33,45 @@ export class ApiSensitiveField extends HTMLElement {
   }
   
   render() {
-    const { name, path, isSensitive, description } = this._field;
+    if (!this.feignRequestUrl) {
+      console.warn('No feignRequestUrl provided to ApiSensitiveField');
+      return;
+    }
+    
+    if (!this.fields || this.fields.length === 0) {
+      console.warn('No fields data available for URL:', this.feignRequestUrl);
+    } else {
+      console.log('渲染字段数据:', { url: this.feignRequestUrl, fields: this.fields });
+    }
     
     this.shadowRoot.innerHTML = `
       <style>
         ${Styles.cssText}
+        
+        .sensitive-group {
+          padding: 8px;
+          border-radius: 4px;
+          background-color: #FAFAFA;
+          margin-bottom: 8px;
+        }
+        
+        .group-header {
+          padding: 8px 0;
+          margin-bottom: 8px;
+          border-bottom: 1px solid var(--border-color);
+        }
+        
+        .group-title {
+          font-weight: 600;
+          font-size: 14px;
+          color: var(--text-color);
+        }
+        
+        .group-subtitle {
+          font-size: 12px;
+          color: #6B7280;
+          margin-top: 2px;
+        }
         
         .sensitive-field {
           display: flex;
@@ -60,8 +81,12 @@ export class ApiSensitiveField extends HTMLElement {
           border: 1px solid var(--border-color);
           border-radius: 4px;
           margin-bottom: 8px;
-          background-color: #FAFAFA;
+          background-color: #FFFFFF;
           transition: all 0.2s;
+        }
+        
+        .sensitive-field:last-child {
+          margin-bottom: 0;
         }
         
         .sensitive-field.marked {
@@ -75,20 +100,23 @@ export class ApiSensitiveField extends HTMLElement {
           gap: 2px;
         }
         
-        .field-name {
+        .field-path {
           font-weight: 500;
           font-size: 13px;
         }
         
-        .field-path {
-          font-size: 11px;
-          color: #6B7280;
-        }
-        
-        .field-description {
+        .field-status {
           font-size: 11px;
           color: #6B7280;
           margin-top: 2px;
+        }
+        
+        .status-confirmed {
+          color: var(--success-color);
+        }
+        
+        .status-pending {
+          color: var(--warning-color);
         }
         
         .field-actions {
@@ -119,26 +147,20 @@ export class ApiSensitiveField extends HTMLElement {
         .field-actions button.unmark {
           color: #6B7280;
         }
+        
+        .field-actions button.filter {
+          color: var(--primary-color);
+        }
       </style>
       
-      <div class="sensitive-field ${isSensitive ? 'marked' : ''}">
-        <div class="field-info">
-          <div class="field-name">${name}</div>
-          <div class="field-path">${path}</div>
-          ${description ? `<div class="field-description">${description}</div>` : ''}
+      <div class="sensitive-group">
+        <div class="group-header">
+          <div class="group-title">${this.feignRequestUrl}</div>
+          <div class="group-subtitle">包含 ${this.fields.length} 个敏感字段路径</div>
         </div>
-        <div class="field-actions">
-          ${isSensitive ? 
-            `<button class="unmark" title="取消敏感标记" id="toggle-btn">
-              ${getSvgIcon('unmark')}
-            </button>` : 
-            `<button class="mark" title="标记为敏感" id="toggle-btn">
-              ${getSvgIcon('mark')}
-            </button>`
-          }
-          <button class="filter" title="过滤此字段" id="filter-btn">
-            ${getSvgIcon('filter')}
-          </button>
+        
+        <div class="fields-container">
+          ${this.fields.map(field => this._renderField(field)).join('')}
         </div>
       </div>
     `;
@@ -146,33 +168,92 @@ export class ApiSensitiveField extends HTMLElement {
     this.setupEventListeners();
   }
   
+  _renderField(field) {
+    const { id, path, status, isSensitive } = field;
+    const statusClass = status === 'CONFIRMED' ? 'status-confirmed' : 'status-pending';
+    const statusText = status === 'CONFIRMED' ? '已确认' : '待确认';
+    
+    return `
+      <div class="sensitive-field ${isSensitive ? 'marked' : ''}" data-field-id="${id}">
+        <div class="field-info">
+          <div class="field-path">${path}</div>
+          <div class="field-status ${statusClass}">${statusText}</div>
+        </div>
+        <div class="field-actions">
+          ${isSensitive ? 
+            `<button class="unmark" title="取消敏感标记" data-action="toggle" data-field-id="${id}">
+              ${getSvgIcon('unmark')}
+            </button>` : 
+            `<button class="mark" title="标记为敏感" data-action="toggle" data-field-id="${id}">
+              ${getSvgIcon('mark')}
+            </button>`
+          }
+          <button class="filter" title="过滤此字段" data-action="filter" data-field-id="${id}">
+            ${getSvgIcon('filter')}
+          </button>
+        </div>
+      </div>
+    `;
+  }
+  
   setupEventListeners() {
-    const toggleBtn = this.shadowRoot.getElementById('toggle-btn');
-    const filterBtn = this.shadowRoot.getElementById('filter-btn');
+    // 使用委托处理所有敏感字段的事件
+    this.shadowRoot.addEventListener('click', (e) => {
+      const button = e.target.closest('button');
+      if (!button) return;
+      
+      const fieldId = button.getAttribute('data-field-id');
+      const action = button.getAttribute('data-action');
+      
+      if (action === 'toggle') {
+        this._toggleSensitiveStatus(fieldId);
+      } else if (action === 'filter') {
+        this._filterField(fieldId);
+      }
+    });
+  }
+  
+  _toggleSensitiveStatus(fieldId) {
+    const field = this.fields.find(f => f.id === fieldId);
+    if (!field) return;
     
-    if (toggleBtn) {
-      toggleBtn.addEventListener('click', () => {
-        this._field.isSensitive = !this._field.isSensitive;
-        
-        this.dispatchEvent(new CustomEvent('sensitive-toggle', {
-          bubbles: true,
-          composed: true,
-          detail: { field: this._field }
-        }));
-        
-        this.render();
-      });
-    }
+    // 切换敏感状态
+    field.isSensitive = !field.isSensitive;
+    field.status = field.isSensitive ? 'CONFIRMED' : 'PENDING';
     
-    if (filterBtn) {
-      filterBtn.addEventListener('click', () => {
-        this.dispatchEvent(new CustomEvent('field-filter', {
-          bubbles: true,
-          composed: true,
-          detail: { field: this._field }
-        }));
-      });
-    }
+    // 通知父组件状态变化
+    this.dispatchEvent(new CustomEvent('sensitive-toggle', {
+      bubbles: true,
+      composed: true,
+      detail: { 
+        fieldId,
+        isSensitive: field.isSensitive,
+        path: field.path,
+        feignRequestUrl: this.feignRequestUrl
+      }
+    }));
+    
+    // 重新渲染
+    this.render();
+  }
+  
+  _filterField(fieldId) {
+    const field = this.fields.find(f => f.id === fieldId);
+    if (!field) return;
+    
+    // 通知父组件过滤字段
+    this.dispatchEvent(new CustomEvent('field-filter', {
+      bubbles: true,
+      composed: true,
+      detail: { 
+        fieldId,
+        path: field.path,
+        feignRequestUrl: this.feignRequestUrl
+      }
+    }));
+    
+    // 显示提示
+    alert(`将过滤字段路径 "${field.path}"`);
   }
 }
 
