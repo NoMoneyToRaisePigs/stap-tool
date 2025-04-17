@@ -116,6 +116,12 @@ export class ApiInspectorContainer extends HTMLElement {
           overflow: hidden;
         }
         
+        .api-list-container {
+          flex: 1;
+          overflow-y: auto;
+          overflow-x: hidden;
+        }
+        
         .container.dragging {
           opacity: 0.9;
           transition: none;
@@ -126,7 +132,9 @@ export class ApiInspectorContainer extends HTMLElement {
         <slot name="header"></slot>
         <div class="content" style="${this.minimized ? 'display: none;' : ''}">
           <slot name="toolbar"></slot>
-          <slot name="api-list"></slot>
+          <div class="api-list-container">
+            <slot name="api-list"></slot>
+          </div>
           <slot name="footer"></slot>
         </div>
       </div>
