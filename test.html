@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="renderer" content="webkit">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Stap Tool 测试页</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    h1 {
+      color: #333;
+      margin-top: 0;
+    }
+    
+    .button-group {
+      margin: 20px 0;
+    }
+    
+    button {
+      background-color: #4F46E5;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      transition: background-color 0.2s;
+    }
+    
+    button:hover {
+      background-color: #4338CA;
+    }
+    
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+      border-left: 4px solid #4F46E5;
+    }
+    
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>API Inspector 测试页面</h1>
+    <p>这个页面用于测试 API Inspector 工具的功能，特别是拖拽和大小调整。</p>
+    
+    <div class="button-group">
+      <button id="fetch-data">发送 Fetch 请求</button>
+      <button id="xhr-data">发送 XHR 请求</button>
+      <button id="clear-results">清除结果</button>
+    </div>
+    
+    <div id="result" class="result" style="display: none;">
+      <pre id="result-content"></pre>
+    </div>
+  </div>
+  
+  <!-- 加载 API Inspector -->
+  <script src="dist/api-inspector.js" type="module"></script>
+  
+  <script>
+    // 测试脚本
+    document.addEventListener('DOMContentLoaded', () => {
+      const resultDiv = document.getElementById('result');
+      const resultContent = document.getElementById('result-content');
+      
+      // Fetch 请求按钮
+      document.getElementById('fetch-data').addEventListener('click', async () => {
+        resultDiv.style.display = 'block';
+        resultContent.textContent = '正在发送 Fetch 请求...';
+        
+        try {
+          const response = await fetch('https://jsonplaceholder.typicode.com/posts/1');
+          const data = await response.json();
+          
+          resultContent.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          resultContent.textContent = `错误: ${error.message}`;
+        }
+      });
+      
+      // XHR 请求按钮
+      document.getElementById('xhr-data').addEventListener('click', () => {
+        resultDiv.style.display = 'block';
+        resultContent.textContent = '正在发送 XHR 请求...';
+        
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', 'https://jsonplaceholder.typicode.com/users/1');
+        
+        xhr.onload = function() {
+          if (xhr.status === 200) {
+            const data = JSON.parse(xhr.responseText);
+            resultContent.textContent = JSON.stringify(data, null, 2);
+          } else {
+            resultContent.textContent = `错误: ${xhr.statusText}`;
+          }
+        };
+        
+        xhr.onerror = function() {
+          resultContent.textContent = '网络错误';
+        };
+        
+        xhr.send();
+      });
+      
+      // 清除结果按钮
+      document.getElementById('clear-results').addEventListener('click', () => {
+        resultDiv.style.display = 'none';
+        resultContent.textContent = '';
+      });
+    });
+  </script>
+</body>
+
+</html> 

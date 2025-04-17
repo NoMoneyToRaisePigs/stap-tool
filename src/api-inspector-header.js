@@ -1,5 +1,6 @@
 // src/api-inspector-header.js
 import { Styles, getSvgIcon } from './styles.js';
+import Draggable from './js-draggable.js';
 
 export class ApiInspectorHeader extends HTMLElement {
   constructor() {
@@ -22,7 +23,8 @@ export class ApiInspectorHeader extends HTMLElement {
   }
   
   connectedCallback() {
-    this.setupDrag();
+    // 确保DOM已经完全加载
+    setTimeout(() => this.setupDrag(), 300);
     
     // 监听来自container的最小化状态变更
     this.parentElement.addEventListener('minimized-changed', (e) => {
@@ -45,6 +47,7 @@ export class ApiInspectorHeader extends HTMLElement {
           color: white;
           cursor: move;
           user-select: none;
+          touch-action: none;
         }
         
         .title {
@@ -110,14 +113,18 @@ export class ApiInspectorHeader extends HTMLElement {
     const minimizeButton = this.shadowRoot.getElementById('minimize-button');
     const closeButton = this.shadowRoot.getElementById('close-button');
     
-    minimizeButton.addEventListener('click', () => {
+    minimizeButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      
       this.dispatchEvent(new CustomEvent('minimize-toggle', {
         bubbles: true,
         composed: true
       }));
     });
     
-    closeButton.addEventListener('click', () => {
+    closeButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      
       this.dispatchEvent(new CustomEvent('close-inspector', {
         bubbles: true,
         composed: true
@@ -127,55 +134,38 @@ export class ApiInspectorHeader extends HTMLElement {
   
   setupDrag() {
     const header = this.shadowRoot.getElementById('header');
-    let isDragging = false;
-    let startX, startY;
-    let initialRight, initialBottom;
+    const container = this.parentElement;
     
-    const onMouseDown = (e) => {
-      isDragging = true;
-      
-      const containerRect = this.parentElement.getBoundingClientRect();
-      startX = e.clientX;
-      startY = e.clientY;
-      
-      // 计算初始的right和bottom位置
-      initialRight = window.innerWidth - containerRect.right;
-      initialBottom = window.innerHeight - containerRect.bottom;
-      
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
-      e.preventDefault();
-    };
+    if (!header || !container) {
+      console.error('找不到需要的元素:', { header, container });
+      return;
+    }
     
-    const onMouseMove = (e) => {
-      if (!isDragging) return;
-      
-      const deltaX = e.clientX - startX;
-      const deltaY = e.clientY - startY;
-      
-      // 计算新位置，确保不超出屏幕
-      const newRight = Math.max(0, initialRight - deltaX);
-      const newBottom = Math.max(0, initialBottom - deltaY);
-      
-      // 更新容器位置
-      this.parentElement.style.right = `${newRight}px`;
-      this.parentElement.style.bottom = `${newBottom}px`;
-      
-      // 发送位置变更事件
-      this.dispatchEvent(new CustomEvent('position-changed', {
-        bubbles: true,
-        composed: true,
-        detail: { x: newRight, y: newBottom }
-      }));
-    };
+    console.log('初始化拖拽', { header, container });
     
-    const onMouseUp = () => {
-      isDragging = false;
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-    
-    header.addEventListener('mousedown', onMouseDown);
+    // 使用新的拖拽库
+    this.draggable = new Draggable(header, container, {
+      onDragEnd: (position) => {
+        // 拖拽结束时，发送事件以保存位置
+        container.dispatchEvent(new CustomEvent('position-changed', {
+          bubbles: true,
+          composed: true,
+          detail: { 
+            x: position.x, 
+            y: position.y 
+          }
+        }));
+        
+        console.log('发送位置变更事件:', position);
+      }
+    });
+  }
+  
+  disconnectedCallback() {
+    // 销毁拖拽实例
+    if (this.draggable) {
+      this.draggable.destroy();
+    }
   }
 }
 

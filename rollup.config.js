@@ -14,11 +14,11 @@ export default {
       name: 'ApiInspector',
       sourcemap: !isProduction
     },
-    {
-      file: 'dist/api-inspector.esm.js',
-      format: 'es',
-      sourcemap: !isProduction
-    }
+    // {
+    //   file: 'dist/api-inspector.esm.js',
+    //   format: 'es',
+    //   sourcemap: !isProduction
+    // }
   ],
   plugins: [
     resolve(),

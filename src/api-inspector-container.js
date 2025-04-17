@@ -6,7 +6,7 @@ export class ApiInspectorContainer extends HTMLElement {
     super();
     this.attachShadow({ mode: 'open' });
     this.minimized = false;
-    this.position = { x: 20, y: 20 };
+    this.position = { left: 20, top: 20 };
     this.size = { width: 400, height: 500 };
     
     // 从localStorage加载位置和大小
@@ -18,6 +18,12 @@ export class ApiInspectorContainer extends HTMLElement {
   
   connectedCallback() {
     this.setupDragAndResize();
+    
+    // 如果没有定位，则初始化到右下角
+    if (!this.style.left && !this.style.top) {
+      this.style.left = `${this.position.left}px`;
+      this.style.top = `${this.position.top}px`;
+    }
   }
   
   loadState() {
@@ -26,7 +32,22 @@ export class ApiInspectorContainer extends HTMLElement {
       try {
         const state = JSON.parse(savedState);
         this.minimized = state.minimized || false;
-        this.position = state.position || { x: 20, y: 20 };
+        
+        // 兼容旧版本的位置数据 (x/y表示right/bottom) 转换为 left/top
+        if (state.position) {
+          if ('x' in state.position && 'y' in state.position) {
+            // 转换旧格式 (right/bottom) 到 新格式 (left/top)
+            this.position = { 
+              left: window.innerWidth - (state.position.x + (state.size?.width || this.size.width)),
+              top: window.innerHeight - (state.position.y + (state.size?.height || this.size.height))
+            };
+          } else {
+            this.position = state.position;
+          }
+        } else {
+          this.position = { left: 20, top: 20 };
+        }
+        
         this.size = state.size || { width: 400, height: 500 };
       } catch (e) {
         console.error('Failed to load API Inspector state', e);
@@ -46,8 +67,8 @@ export class ApiInspectorContainer extends HTMLElement {
   render() {
     const containerStyle = `
       position: fixed;
-      bottom: ${this.position.y}px;
-      right: ${this.position.x}px;
+      left: ${this.position.left}px;
+      top: ${this.position.top}px;
       z-index: 9999;
       width: ${this.minimized ? '200px' : `${this.size.width}px`};
       height: ${this.minimized ? '40px' : `${this.size.height}px`};
@@ -148,7 +169,11 @@ export class ApiInspectorContainer extends HTMLElement {
     
     // 拖拽功能在header组件中实现，这里仅监听position变化
     this.addEventListener('position-changed', (e) => {
-      this.position = e.detail;
+      // 更新位置存储
+      this.position = { 
+        left: e.detail.x,
+        top: e.detail.y
+      };
       this.saveState();
     });
   }
