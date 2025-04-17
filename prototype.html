@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Inspector</title>
+    <style>
+        :root {
+            --primary-color: #4F46E5;
+            --secondary-color: #6366F1;
+            --background-color: #FFFFFF;
+            --panel-background: #F9FAFB;
+            --text-color: #1F2937;
+            --border-color: #E5E7EB;
+            --success-color: #10B981;
+            --warning-color: #F59E0B;
+            --danger-color: #EF4444;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        #api-inspector-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            width: 400px;
+            height: 500px;
+            background-color: var(--background-color);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            resize: both;
+            min-width: 320px;
+            min-height: 300px;
+            max-width: 800px;
+            max-height: 800px;
+            transition: all 0.3s ease;
+        }
+
+        #api-inspector-container.minimized {
+            height: 40px !important;
+            width: 200px !important;
+            resize: none;
+        }
+
+        .api-inspector-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background-color: var(--primary-color);
+            color: white;
+            cursor: move;
+            user-select: none;
+        }
+
+        .api-inspector-title {
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .api-inspector-title-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .api-inspector-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .api-inspector-button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .api-inspector-button:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .api-inspector-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .api-inspector-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--panel-background);
+        }
+
+        .api-inspector-search {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            max-width: 240px;
+            position: relative;
+        }
+
+        .api-inspector-search-icon {
+            position: absolute;
+            left: 8px;
+            color: #9CA3AF;
+        }
+
+        .api-inspector-search input {
+            width: 100%;
+            padding: 6px 12px 6px 32px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--text-color);
+            outline: none;
+        }
+
+        .api-inspector-search input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+        }
+
+        .api-inspector-stats {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #6B7280;
+        }
+
+        .api-inspector-stat {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .api-inspector-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .api-inspector-request {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .api-inspector-request:hover {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .api-inspector-request-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background-color: var(--panel-background);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .api-inspector-request-method {
+            font-weight: 600;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .method-get {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .method-post {
+            background-color: rgba(79, 70, 229, 0.1);
+            color: var(--primary-color);
+        }
+
+        .method-put {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+        }
+
+        .method-delete {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+        }
+
+        .api-inspector-request-path {
+            flex: 1;
+            font-size: 12px;
+            margin: 0 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-color);
+        }
+
+        .api-inspector-request-status {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .status-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .status-error {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+        }
+
+        .api-inspector-request-content {
+            padding: 12px;
+            font-size: 12px;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--background-color);
+            display: none;
+        }
+
+        .api-inspector-request.expanded .api-inspector-request-content {
+            display: block;
+        }
+
+        .api-inspector-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 8px;
+        }
+
+        .api-inspector-tab {
+            padding: 8px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            color: #6B7280;
+            border-bottom: 2px solid transparent;
+        }
+
+        .api-inspector-tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .api-inspector-tab-content {
+            display: none;
+        }
+
+        .api-inspector-tab-content.active {
+            display: block;
+        }
+
+        .api-inspector-property {
+            margin-bottom: 8px;
+        }
+
+        .api-inspector-property-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: #4B5563;
+        }
+
+        .api-inspector-property-value {
+            padding: 6px 8px;
+            background-color: #F3F4F6;
+            border-radius: 4px;
+            font-family: monospace;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .api-inspector-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .api-inspector-action {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 4px;
+            border: none;
+            background-color: var(--panel-background);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .api-inspector-action:hover {
+            background-color: #F3F4F6;
+        }
+
+        .api-inspector-action.primary {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .api-inspector-action.primary:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .api-inspector-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--panel-background);
+        }
+
+        .api-inspector-status {
+            font-size: 12px;
+            color: #6B7280;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .api-inspector-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--success-color);
+        }
+
+        .api-inspector-actions-footer {
+            display: flex;
+            gap: 8px;
+        }
+
+        .sensitive-field {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left: 3px solid var(--danger-color);
+            padding-left: 5px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 500px) {
+            #api-inspector-container {
+                width: 90%;
+                right: 5%;
+                left: 5%;
+            }
+        }
+
+        /* 敏感字段管理样式 */
+        .api-inspector-sensitive-empty {
+            text-align: center;
+            padding: 20px;
+            color: #6B7280;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .api-inspector-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #6B7280;
+        }
+        
+        .spinner {
+            animation: rotate 2s linear infinite;
+            width: 30px;
+            height: 30px;
+        }
+        
+        .spinner .path {
+            stroke: var(--primary-color);
+            stroke-linecap: round;
+            animation: dash 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes rotate {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        
+        @keyframes dash {
+            0% {
+                stroke-dasharray: 1, 150;
+                stroke-dashoffset: 0;
+            }
+            50% {
+                stroke-dasharray: 90, 150;
+                stroke-dashoffset: -35;
+            }
+            100% {
+                stroke-dasharray: 90, 150;
+                stroke-dashoffset: -124;
+            }
+        }
+        
+        .api-inspector-sensitive-field {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 8px;
+            background-color: #FAFAFA;
+        }
+        
+        .api-inspector-sensitive-field.marked {
+            background-color: rgba(239, 68, 68, 0.05);
+            border-left: 3px solid var(--danger-color);
+        }
+        
+        .api-inspector-field-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .api-inspector-field-name {
+            font-weight: 500;
+            font-size: 13px;
+        }
+        
+        .api-inspector-field-path {
+            font-size: 11px;
+            color: #6B7280;
+        }
+        
+        .api-inspector-field-actions {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .api-inspector-field-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .api-inspector-field-actions button:hover {
+            background-color: #F3F4F6;
+        }
+        
+        .api-inspector-field-actions button.mark {
+            color: var(--danger-color);
+        }
+        
+        .api-inspector-field-actions button.unmark {
+            color: #6B7280;
+        }
+        
+        .api-inspector-sensitive-actions {
+            margin-top: 16px;
+            display: flex;
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+<body>
+    <div id="api-inspector-container">
+        <div class="api-inspector-header" id="api-inspector-header">
+            <div class="api-inspector-title">
+                <svg class="api-inspector-title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                API Inspector
+            </div>
+            <div class="api-inspector-controls">
+                <button class="api-inspector-button" id="api-inspector-minimize">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
+                <button class="api-inspector-button" id="api-inspector-close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="api-inspector-content">
+            <div class="api-inspector-toolbar">
+                <div class="api-inspector-search">
+                    <svg class="api-inspector-search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" placeholder="Search APIs..." id="api-inspector-search-input">
+                </div>
+                <div class="api-inspector-stats">
+                    <div class="api-inspector-stat">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <span id="api-request-count">12</span> Requests
+                    </div>
+                    <div class="api-inspector-stat">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        <span id="sensitive-fields-count">3</span> Sensitive
+                    </div>
+                </div>
+            </div>
+            <div class="api-inspector-list" id="api-inspector-list">
+                <!-- Request 1 -->
+                <div class="api-inspector-request">
+                    <div class="api-inspector-request-header">
+                        <span class="api-inspector-request-method method-get">GET</span>
+                        <span class="api-inspector-request-path">/api/v1/users</span>
+                        <span class="api-inspector-request-status status-success">200</span>
+                    </div>
+                    <div class="api-inspector-request-content">
+                        <div class="api-inspector-tabs">
+                            <div class="api-inspector-tab active">Details</div>
+                            <div class="api-inspector-tab">Headers</div>
+                            <div class="api-inspector-tab">Response</div>
+                        </div>
+                        <div class="api-inspector-tab-content active">
+                            <div class="api-inspector-property">
+                                <div class="api-inspector-property-name">URL</div>
+                                <div class="api-inspector-property-value">https://example.com/api/v1/users</div>
+                            </div>
+                            <div class="api-inspector-property">
+                                <div class="api-inspector-property-name">Page</div>
+                                <div class="api-inspector-property-value">User Management</div>
+                            </div>
+                            <div class="api-inspector-property">
+                                <div class="api-inspector-property-name">Timestamp</div>
+                                <div class="api-inspector-property-value">2025-04-16 10:23:45</div>
+                            </div>
+                            <div class="api-inspector-actions">
+                                <button class="api-inspector-action">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                    Copy
+                                </button>
+                                <button class="api-inspector-action primary">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M9 11l3 3L22 4"></path>
+                                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                                    </svg>
+                                    Analyze Sensitive
+                                </button>
+                            </div>
+                        </div>
+                        <div class="api-inspector-tab-content">
+                            <div class="api-inspector-property">
+                                <div class="api-inspector-property-value">Authorization: Bearer ********
+Content-Type: application/json
+Accept: application/json</div>
+                            </div>
+                        </div>
+                        <div class="api-inspector-tab-content">
+                            <div class="api-inspector-property">
+                                <div class="api-inspector-property-value">{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "<span class="sensitive-field">email</span>": "john.doe@example.com",
+      "role": "admin"
+    },
+    {
+      "id": 2,
+      "<span class="sensitive-field">email</span>": "jane.smith@example.com",
+      "role": "user"
+    }
+  ]
+}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Request 2 -->
+                <div class="api-inspector-request">
+                    <div class="api-inspector-request-header">
+                        <span class="api-inspector-request-method method-post">POST</span>
+                        <span class="api-inspector-request-path">/api/v1/users/create</span>
+                        <span class="api-inspector-request-status status-success">201</span>
+                    </div>
+                    <div class="api-inspector-request-content">
+                        <!-- Content similar to request 1 -->
+                    </div>
+                </div>
+
+                <!-- Request 3 -->
+                <div class="api-inspector-request">
+                    <div class="api-inspector-request-header">
+                        <span class="api-inspector-request-method method-put">PUT</span>
+                        <span class="api-inspector-request-path">/api/v1/users/3</span>
+                        <span class="api-inspector-request-status status-success">200</span>
+                    </div>
+                    <div class="api-inspector-request-content">
+                        <!-- Content similar to request 1 -->
+                    </div>
+                </div>
+
+                <!-- Request 4 -->
+                <div class="api-inspector-request">
+                    <div class="api-inspector-request-header">
+                        <span class="api-inspector-request-method method-delete">DELETE</span>
+                        <span class="api-inspector-request-path">/api/v1/users/2</span>
+                        <span class="api-inspector-request-status status-error">403</span>
+                    </div>
+                    <div class="api-inspector-request-content">
+                        <!-- Content similar to request 1 -->
+                    </div>
+                </div>
+            </div>
+            <div class="api-inspector-footer">
+                <div class="api-inspector-status">
+                    <span class="api-inspector-status-dot"></span>
+                    Active | Current page: User Management
+                </div>
+                <div class="api-inspector-actions-footer">
+                    <button class="api-inspector-action">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Export JSON
+                    </button>
+                    <button class="api-inspector-action">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Make the inspector draggable
+        const container = document.getElementById('api-inspector-container');
+        const header = document.getElementById('api-inspector-header');
+        let isDragging = false;
+        let dragOffsetX, dragOffsetY;
+
+        header.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            dragOffsetX = e.clientX - container.getBoundingClientRect().left;
+            dragOffsetY = e.clientY - container.getBoundingClientRect().top;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const x = e.clientX - dragOffsetX;
+                const y = e.clientY - dragOffsetY;
+                
+                // Ensure the inspector stays within viewport bounds
+                const maxX = window.innerWidth - container.offsetWidth;
+                const maxY = window.innerHeight - container.offsetHeight;
+                
+                container.style.left = `${Math.max(0, Math.min(x, maxX))}px`;
+                container.style.top = `${Math.max(0, Math.min(y, maxY))}px`;
+                container.style.right = 'auto';
+                container.style.bottom = 'auto';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Minimize/maximize functionality
+        const minimizeButton = document.getElementById('api-inspector-minimize');
+        minimizeButton.addEventListener('click', () => {
+            container.classList.toggle('minimized');
+            
+            // Change button icon based on state
+            if (container.classList.contains('minimized')) {
+                minimizeButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="5 12 5 19 19 19 19 12"></polyline>
+                        <polyline points="12 5 12 19"></polyline>
+                    </svg>
+                `;
+            } else {
+                minimizeButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                `;
+            }
+        });
+
+        // Close functionality
+        const closeButton = document.getElementById('api-inspector-close');
+        closeButton.addEventListener('click', () => {
+            container.style.display = 'none';
+        });
+
+        // Request expand/collapse functionality
+        const requestHeaders = document.querySelectorAll('.api-inspector-request-header');
+        requestHeaders.forEach(header => {
+            header.addEventListener('click', () => {
+                const request = header.parentElement;
+                request.classList.toggle('expanded');
+            });
+        });
+
+        // Tab switching functionality
+        const tabContainers = document.querySelectorAll('.api-inspector-tabs');
+        tabContainers.forEach(tabContainer => {
+            const tabs = tabContainer.querySelectorAll('.api-inspector-tab');
+            const tabContents = tabContainer.parentElement.querySelectorAll('.api-inspector-tab-content');
+            
+            tabs.forEach((tab, index) => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs and contents
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding content
+                    tab.classList.add('active');
+                    tabContents[index].classList.add('active');
+                });
+            });
+        });
+
+        // Search functionality
+        const searchInput = document.getElementById('api-inspector-search-input');
+        const requests = document.querySelectorAll('.api-inspector-request');
+        
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            
+            requests.forEach(request => {
+                const path = request.querySelector('.api-inspector-request-path').textContent.toLowerCase();
+                const method = request.querySelector('.api-inspector-request-method').textContent.toLowerCase();
+                
+                if (path.includes(searchTerm) || method.includes(searchTerm)) {
+                    request.style.display = 'block';
+                } else {
+                    request.style.display = 'none';
+                }
+            });
+        });
+
+        // Placeholder for API interception logic
+        function interceptRequests() {
+            // Intercept fetch
+            const originalFetch = window.fetch;
+            window.fetch = function(url, options) {
+                // Record the request
+                recordApiCall('fetch', url, options);
+                
+                // Call the original fetch
+                return originalFetch.apply(this, arguments)
+                    .then(response => {
+                        // Record response
+                        updateApiCall(url, response);
+                        return response;
+                    })
+                    .catch(error => {
+                        // Record error
+                        updateApiCallError(url, error);
+                        throw error;
+                    });
+            };
+            
+            // Intercept XMLHttpRequest
+            const originalXhrOpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function(method, url) {
+                this._apiInspectorMethod = method;
+                this._apiInspectorUrl = url;
+                
+                // Record the request
+                recordApiCall('xhr', url, { method });
+                
+                return originalXhrOpen.apply(this, arguments);
+            };
+            
+            const originalXhrSend = XMLHttpRequest.prototype.send;
+            XMLHttpRequest.prototype.send = function(body) {
+                const xhr = this;
+                
+                this.addEventListener('load', function() {
+                    // Record response
+                    updateApiCall(xhr._apiInspectorUrl, {
+                        status: xhr.status,
+                        responseText: xhr.responseText
+                    });
+                });
+                
+                this.addEventListener('error', function() {
+                    // Record error
+                    updateApiCallError(xhr._apiInspectorUrl, 'Network error');
+                });
+                
+                return originalXhrSend.apply(this, arguments);
+            };
+        }
+
+        // Placeholder functions for recording API calls
+        function recordApiCall(type, url, options) {
+            console.log('API Call Recorded:', type, url, options);
+            // Implementation to add request to the UI would go here
+        }
+        
+        function updateApiCall(url, response) {
+            console.log('API Response Recorded:', url, response);
+            // Implementation to update request with response in the UI would go here
+        }
+        
+        function updateApiCallError(url, error) {
+            console.log('API Error Recorded:', url, error);
+        }
+
+        // 添加敏感字段的分析和管理功能
+        
+        // 模拟从后端获取敏感字段的函数
+        function fetchSensitiveFields(apiUrl) {
+            return new Promise((resolve, reject) => {
+                // 模拟网络请求
+                setTimeout(() => {
+                    // 这里返回模拟数据，实际应用中应该从后端获取
+                    const sensitiveFields = [
+                        {
+                            name: "email",
+                            path: "data[].email",
+                            isSensitive: true,
+                            description: "用户电子邮箱，属于个人隐私信息"
+                        },
+                        {
+                            name: "password",
+                            path: "data[].password",
+                            isSensitive: true,
+                            description: "用户密码，高度敏感信息"
+                        },
+                        {
+                            name: "address",
+                            path: "data[].address",
+                            isSensitive: false,
+                            description: "用户地址信息"
+                        },
+                        {
+                            name: "phone",
+                            path: "data[].contact.phone",
+                            isSensitive: true,
+                            description: "用户联系电话，属于个人隐私信息"
+                        }
+                    ];
+                    resolve(sensitiveFields);
+                }, 1000);
+            });
+        }
+        
+        // 显示敏感字段列表
+        function renderSensitiveFields(fields, container) {
+            container.innerHTML = '';
+            
+            fields.forEach(field => {
+                const fieldElement = document.createElement('div');
+                fieldElement.className = `api-inspector-sensitive-field ${field.isSensitive ? 'marked' : ''}`;
+                fieldElement.setAttribute('data-field-name', field.name);
+                fieldElement.setAttribute('data-field-path', field.path);
+                
+                fieldElement.innerHTML = `
+                    <div class="api-inspector-field-info">
+                        <div class="api-inspector-field-name">${field.name}</div>
+                        <div class="api-inspector-field-path">${field.path}</div>
+                    </div>
+                    <div class="api-inspector-field-actions">
+                        ${field.isSensitive ? 
+                            `<button class="unmark" title="取消敏感标记">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M9 11l-6 6v3h9l3-3"></path>
+                                    <path d="M22 12l-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"></path>
+                                </svg>
+                            </button>` : 
+                            `<button class="mark" title="标记为敏感">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                                </svg>
+                            </button>`
+                        }
+                        <button class="filter" title="过滤此字段">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+                
+                container.appendChild(fieldElement);
+                
+                // 添加标记/取消标记事件
+                const markButton = fieldElement.querySelector('button.mark');
+                const unmarkButton = fieldElement.querySelector('button.unmark');
+                
+                if (markButton) {
+                    markButton.addEventListener('click', () => {
+                        field.isSensitive = true;
+                        renderSensitiveFields(fields, container);
+                    });
+                }
+                
+                if (unmarkButton) {
+                    unmarkButton.addEventListener('click', () => {
+                        field.isSensitive = false;
+                        renderSensitiveFields(fields, container);
+                    });
+                }
+                
+                // 添加过滤事件
+                const filterButton = fieldElement.querySelector('button.filter');
+                filterButton.addEventListener('click', () => {
+                    alert(`字段 "${field.name}" 已设置为过滤处理`);
+                });
+            });
+        }
+        
+        // 为分析敏感按钮添加事件处理
+        function setupSensitiveAnalysisButtons() {
+            const analyzeButtons = document.querySelectorAll('.api-inspector-action.primary');
+            
+            analyzeButtons.forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    
+                    // 获取当前请求项
+                    const requestItem = button.closest('.api-inspector-request');
+                    
+                    // 找到URL
+                    const urlElement = requestItem.querySelector('.api-inspector-property-value');
+                    const apiUrl = urlElement.textContent;
+                    
+                    // 添加敏感字段标签到标签栏
+                    const tabsContainer = requestItem.querySelector('.api-inspector-tabs');
+                    
+                    // 检查是否已有敏感字段标签
+                    if (!requestItem.querySelector('.api-inspector-tab[data-tab="sensitive"]')) {
+                        const sensitiveTab = document.createElement('div');
+                        sensitiveTab.className = 'api-inspector-tab';
+                        sensitiveTab.setAttribute('data-tab', 'sensitive');
+                        sensitiveTab.textContent = '敏感字段';
+                        tabsContainer.appendChild(sensitiveTab);
+                        
+                        // 添加标签点击事件
+                        sensitiveTab.addEventListener('click', () => {
+                            // 移除其他标签的活动状态
+                            requestItem.querySelectorAll('.api-inspector-tab').forEach(tab => {
+                                tab.classList.remove('active');
+                            });
+                            
+                            // 移除其他内容的活动状态
+                            requestItem.querySelectorAll('.api-inspector-tab-content').forEach(content => {
+                                content.classList.remove('active');
+                            });
+                            
+                            // 激活当前标签
+                            sensitiveTab.classList.add('active');
+                            
+                            // 创建或激活敏感字段内容面板
+                            let sensitiveContent = requestItem.querySelector('#sensitive-fields-panel');
+                            
+                            if (!sensitiveContent) {
+                                sensitiveContent = document.createElement('div');
+                                sensitiveContent.className = 'api-inspector-tab-content';
+                                sensitiveContent.id = 'sensitive-fields-panel';
+                                
+                                sensitiveContent.innerHTML = `
+                                    <div class="api-inspector-loading" id="sensitive-fields-loading">
+                                        <svg class="spinner" viewBox="0 0 50 50">
+                                            <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+                                        </svg>
+                                        <p>获取敏感字段信息...</p>
+                                    </div>
+                                    
+                                    <div class="api-inspector-sensitive-empty" id="sensitive-fields-empty" style="display: none;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                                            <polyline points="13 2 13 9 20 9"></polyline>
+                                        </svg>
+                                        <p>暂无敏感字段信息</p>
+                                    </div>
+                                    
+                                    <div class="api-inspector-sensitive-list" id="sensitive-fields-list" style="display: none;"></div>
+                                    
+                                    <div class="api-inspector-sensitive-actions" style="display: none;">
+                                        <button class="api-inspector-action" id="save-sensitive-fields">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                                <polyline points="7 3 7 8 15 8"></polyline>
+                                            </svg>
+                                            保存设置
+                                        </button>
+                                    </div>
+                                `;
+                                
+                                requestItem.querySelector('.api-inspector-request-content').appendChild(sensitiveContent);
+                                
+                                // 从后端获取敏感字段信息
+                                fetchSensitiveFields(apiUrl).then(fields => {
+                                    const loadingElement = sensitiveContent.querySelector('#sensitive-fields-loading');
+                                    const emptyElement = sensitiveContent.querySelector('#sensitive-fields-empty');
+                                    const listElement = sensitiveContent.querySelector('#sensitive-fields-list');
+                                    const actionsElement = sensitiveContent.querySelector('.api-inspector-sensitive-actions');
+                                    
+                                    loadingElement.style.display = 'none';
+                                    
+                                    if (fields.length === 0) {
+                                        emptyElement.style.display = 'flex';
+                                    } else {
+                                        listElement.style.display = 'block';
+                                        actionsElement.style.display = 'flex';
+                                        renderSensitiveFields(fields, listElement);
+                                        
+                                        // 添加保存按钮事件
+                                        sensitiveContent.querySelector('#save-sensitive-fields').addEventListener('click', () => {
+                                            // 这里模拟保存到后端的操作
+                                            alert('敏感字段设置已保存');
+                                        });
+                                    }
+                                }).catch(error => {
+                                    console.error('获取敏感字段失败:', error);
+                                    const loadingElement = sensitiveContent.querySelector('#sensitive-fields-loading');
+                                    loadingElement.innerHTML = `
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                        </svg>
+                                        <p>获取敏感字段信息失败</p>
+                                    `;
+                                });
+                            }
+                            
+                            sensitiveContent.classList.add('active');
+                        });
+                    }
+                    
+                    // 触发点击事件
+                    requestItem.querySelector('.api-inspector-tab[data-tab="sensitive"]').click();
+                });
+            });
+        }
+        
+        // 在页面加载完成后设置事件
+        document.addEventListener('DOMContentLoaded', () => {
+            setupSensitiveAnalysisButtons();
+        });
+    </script>
+</body>
+</html>

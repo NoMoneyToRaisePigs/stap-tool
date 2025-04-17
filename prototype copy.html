@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Inspector</title>
+    <style>
+        :root {
+            --primary-color: #4F46E5;
+            --secondary-color: #6366F1;
+            --background-color: #FFFFFF;
+            --panel-background: #F9FAFB;
+            --text-color: #1F2937;
+            --border-color: #E5E7EB;
+            --success-color: #10B981;
+            --warning-color: #F59E0B;
+            --danger-color: #EF4444;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        #api-inspector-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            width: 400px;
+            height: 500px;
+            background-color: var(--background-color);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            resize: both;
+            min-width: 320px;
+            min-height: 300px;
+            max-width: 800px;
+            max-height: 800px;
+            transition: all 0.3s ease;
+        }
+
+        #api-inspector-container.minimized {
+            height: 40px !important;
+            width: 200px !important;
+            resize: none;
+        }
+
+        .api-inspector-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background-color: var(--primary-color);
+            color: white;
+            cursor: move;
+            user-select: none;
+        }
+
+        .api-inspector-title {
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .api-inspector-title-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .api-inspector-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .api-inspector-button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .api-inspector-button:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .api-inspector-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .api-inspector-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--panel-background);
+        }
+
+        .api-inspector-search {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            max-width: 240px;
+            position: relative;
+        }
+
+        .api-inspector-search-icon {
+            position: absolute;
+            left: 8px;
+            color: #9CA3AF;
+        }
+
+        .api-inspector-search input {
+            width: 100%;
+            padding: 6px 12px 6px 32px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--text-color);
+            outline: none;
+        }
+
+        .api-inspector-search input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+        }
+
+        .api-inspector-stats {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #6B7280;
+        }
+
+        .api-inspector-stat {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .api-inspector-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .api-inspector-request {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .api-inspector-request:hover {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .api-inspector-request-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background-color: var(--panel-background);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .api-inspector-request-method {
+            font-weight: 600;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .method-get {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .method-post {
+            background-color: rgba(79, 70, 229, 0.1);
+            color: var(--primary-color);
+        }
+
+        .method-put {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+        }
+
+        .method-delete {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+        }
+
+        .api-inspector-request-path {
+            flex: 1;
+            font-size: 12px;
+            margin: 0 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-color);
+        }
+
+        .api-inspector-request-status {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .status-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .status-error {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+        }
+
+        .api-inspector-request-content {
+            padding: 12px;
+            font-size: 12px;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--background-color);
+            display: none;
+        }
+
+        .api-inspector-request.expanded .api-inspector-request-content {
+            display: block;
+        }
+
+        .api-inspector-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 8px;
+        }
+
+        .api-inspector-tab {
+            padding: 8px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            color: #6B7280;
+            border-bottom: 2px solid transparent;
+        }
+
+        .api-inspector-tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .api-inspector-tab-content {
+            display: none;
+        }
+
+        .api-inspector-tab-content.active {
+            display: block;
+        }
+
+        .api-inspector-property {
+            margin-bottom: 8px;
+        }
+
+        .api-inspector-property-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: #4B5563;
+        }
+
+        .api-inspector-property-value {
+            padding: 6px 8px;
+            background-color: #F3F4F6;
+            border-radius: 4px;
+            font-family: monospace;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .api-inspector-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .api-inspector-action {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 4px;
+            border: none;
+            background-color: var(--panel-background);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .api-inspector-action:hover {
+            background-color: #F3F4F6;
+        }
+
+        .api-inspector-action.primary {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .api-inspector-action.primary:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .api-inspector-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--panel-background);
+        }
+
+        .api-inspector-status {
+            font-size: 12px;
+            color: #6B7280;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .api-inspector-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--success-color);
+        }
+
+        .api-inspector-actions-footer {
+            display: flex;
+            gap: 8px;
+        }
+
+        .sensitive-field {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left: 3px solid var(--danger-color);
+            padding-left: 5px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 500px) {
+            #api-inspector-container {
+                width: 90%;
+                right: 5%;
+                left: 5%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="api-inspector-container">
+        <div class="api-inspector-header" id="api-inspector-header">
+            <div class="api-inspector-title">
+                <svg class="api-inspector-title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                API Inspector
+            </div>
+            <div class="api-inspector-controls">
+                <button class="api-inspector-button" id="api-inspector-minimize">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
+                <button class="api-inspector-button" id="api-inspector-close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="api-inspector-content">
+            <div class="api-inspector-toolbar">
+                <div class="api-inspector-search">
+                    <svg class="api-inspector-search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" placeholder="Search APIs..." id="api-inspector-search-input">
+                </div>
+                <div class="api-inspector-stats">
+                    <div class="api-inspector-stat">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <span id="api-request-count">12</span> Requests
+                    </div>
+                    <div class="api-inspector-stat">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        <span id="sensitive-fields-count">3</span> Sensitive
+                    </div>
+                </div>
+            </div>
+            <div class="api-inspector-list" id="api-inspector-list">
+                <!-- Request 1 -->
+                <div class="api-inspector-request">
+                    <div class="api-inspector-request-header">
+                        <span class="api-inspector-request-method method-get">GET</span>
+                        <span class="api-inspector-request-path">/api/v1/users</span>
+                        <span class="api-inspector-request-status status-success">200</span>
+                    </div>
+                    <div class="api-inspector-request-content">
+                        <div class="api-inspector-tabs">
+                            <div class="api-inspector-tab active">Details</div>
+                            <div class="api-inspector-tab">Headers</div>
+                            <div class="api-inspector-tab">Response</div>
+                        </div>
+                        <div class="api-inspector-tab-content active">
+                            <div class="api-inspector-property">
+                                <div class="api-inspector-property-name">URL</div>
+                                <div class="api-inspector-property-value">https://example.com/api/v1/users</div>
+                            </div>
+                            <div class="api-inspector-property">
+                                <div class="api-inspector-property-name">Page</div>
+                                <div class="api-inspector-property-value">User Management</div>
+                            </div>
+                            <div class="api-inspector-property">
+                                <div class="api-inspector-property-name">Timestamp</div>
+                                <div class="api-inspector-property-value">2025-04-16 10:23:45</div>
+                            </div>
+                            <div class="api-inspector-actions">
+                                <button class="api-inspector-action">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                    Copy
+                                </button>
+                                <button class="api-inspector-action primary">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M9 11l3 3L22 4"></path>
+                                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                                    </svg>
+                                    Analyze Sensitive
+                                </button>
+                            </div>
+                        </div>
+                        <div class="api-inspector-tab-content">
+                            <div class="api-inspector-property">
+                                <div class="api-inspector-property-value">Authorization: Bearer ********
+Content-Type: application/json
+Accept: application/json</div>
+                            </div>
+                        </div>
+                        <div class="api-inspector-tab-content">
+                            <div class="api-inspector-property">
+                                <div class="api-inspector-property-value">{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "<span class="sensitive-field">email</span>": "john.doe@example.com",
+      "role": "admin"
+    },
+    {
+      "id": 2,
+      "name": "Jane Smith",
+      "<span class="sensitive-field">email</span>": "jane.smith@example.com",
+      "role": "user"
+    }
+  ]
+}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Request 2 -->
+                <div class="api-inspector-request">
+                    <div class="api-inspector-request-header">
+                        <span class="api-inspector-request-method method-post">POST</span>
+                        <span class="api-inspector-request-path">/api/v1/users/create</span>
+                        <span class="api-inspector-request-status status-success">201</span>
+                    </div>
+                    <div class="api-inspector-request-content">
+                        <!-- Content similar to request 1 -->
+                    </div>
+                </div>
+
+                <!-- Request 3 -->
+                <div class="api-inspector-request">
+                    <div class="api-inspector-request-header">
+                        <span class="api-inspector-request-method method-put">PUT</span>
+                        <span class="api-inspector-request-path">/api/v1/users/3</span>
+                        <span class="api-inspector-request-status status-success">200</span>
+                    </div>
+                    <div class="api-inspector-request-content">
+                        <!-- Content similar to request 1 -->
+                    </div>
+                </div>
+
+                <!-- Request 4 -->
+                <div class="api-inspector-request">
+                    <div class="api-inspector-request-header">
+                        <span class="api-inspector-request-method method-delete">DELETE</span>
+                        <span class="api-inspector-request-path">/api/v1/users/2</span>
+                        <span class="api-inspector-request-status status-error">403</span>
+                    </div>
+                    <div class="api-inspector-request-content">
+                        <!-- Content similar to request 1 -->
+                    </div>
+                </div>
+            </div>
+            <div class="api-inspector-footer">
+                <div class="api-inspector-status">
+                    <span class="api-inspector-status-dot"></span>
+                    Active | Current page: User Management
+                </div>
+                <div class="api-inspector-actions-footer">
+                    <button class="api-inspector-action">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Export JSON
+                    </button>
+                    <button class="api-inspector-action">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Make the inspector draggable
+        const container = document.getElementById('api-inspector-container');
+        const header = document.getElementById('api-inspector-header');
+        let isDragging = false;
+        let dragOffsetX, dragOffsetY;
+
+        header.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            dragOffsetX = e.clientX - container.getBoundingClientRect().left;
+            dragOffsetY = e.clientY - container.getBoundingClientRect().top;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const x = e.clientX - dragOffsetX;
+                const y = e.clientY - dragOffsetY;
+                
+                // Ensure the inspector stays within viewport bounds
+                const maxX = window.innerWidth - container.offsetWidth;
+                const maxY = window.innerHeight - container.offsetHeight;
+                
+                container.style.left = `${Math.max(0, Math.min(x, maxX))}px`;
+                container.style.top = `${Math.max(0, Math.min(y, maxY))}px`;
+                container.style.right = 'auto';
+                container.style.bottom = 'auto';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Minimize/maximize functionality
+        const minimizeButton = document.getElementById('api-inspector-minimize');
+        minimizeButton.addEventListener('click', () => {
+            container.classList.toggle('minimized');
+            
+            // Change button icon based on state
+            if (container.classList.contains('minimized')) {
+                minimizeButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="5 12 5 19 19 19 19 12"></polyline>
+                        <polyline points="12 5 12 19"></polyline>
+                    </svg>
+                `;
+            } else {
+                minimizeButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                `;
+            }
+        });
+
+        // Close functionality
+        const closeButton = document.getElementById('api-inspector-close');
+        closeButton.addEventListener('click', () => {
+            container.style.display = 'none';
+        });
+
+        // Request expand/collapse functionality
+        const requestHeaders = document.querySelectorAll('.api-inspector-request-header');
+        requestHeaders.forEach(header => {
+            header.addEventListener('click', () => {
+                const request = header.parentElement;
+                request.classList.toggle('expanded');
+            });
+        });
+
+        // Tab switching functionality
+        const tabContainers = document.querySelectorAll('.api-inspector-tabs');
+        tabContainers.forEach(tabContainer => {
+            const tabs = tabContainer.querySelectorAll('.api-inspector-tab');
+            const tabContents = tabContainer.parentElement.querySelectorAll('.api-inspector-tab-content');
+            
+            tabs.forEach((tab, index) => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs and contents
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding content
+                    tab.classList.add('active');
+                    tabContents[index].classList.add('active');
+                });
+            });
+        });
+
+        // Search functionality
+        const searchInput = document.getElementById('api-inspector-search-input');
+        const requests = document.querySelectorAll('.api-inspector-request');
+        
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            
+            requests.forEach(request => {
+                const path = request.querySelector('.api-inspector-request-path').textContent.toLowerCase();
+                const method = request.querySelector('.api-inspector-request-method').textContent.toLowerCase();
+                
+                if (path.includes(searchTerm) || method.includes(searchTerm)) {
+                    request.style.display = 'block';
+                } else {
+                    request.style.display = 'none';
+                }
+            });
+        });
+
+        // Placeholder for API interception logic
+        function interceptRequests() {
+            // Intercept fetch
+            const originalFetch = window.fetch;
+            window.fetch = function(url, options) {
+                // Record the request
+                recordApiCall('fetch', url, options);
+                
+                // Call the original fetch
+                return originalFetch.apply(this, arguments)
+                    .then(response => {
+                        // Record response
+                        updateApiCall(url, response);
+                        return response;
+                    })
+                    .catch(error => {
+                        // Record error
+                        updateApiCallError(url, error);
+                        throw error;
+                    });
+            };
+            
+            // Intercept XMLHttpRequest
+            const originalXhrOpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function(method, url) {
+                this._apiInspectorMethod = method;
+                this._apiInspectorUrl = url;
+                
+                // Record the request
+                recordApiCall('xhr', url, { method });
+                
+                return originalXhrOpen.apply(this, arguments);
+            };
+            
+            const originalXhrSend = XMLHttpRequest.prototype.send;
+            XMLHttpRequest.prototype.send = function(body) {
+                const xhr = this;
+                
+                this.addEventListener('load', function() {
+                    // Record response
+                    updateApiCall(xhr._apiInspectorUrl, {
+                        status: xhr.status,
+                        responseText: xhr.responseText
+                    });
+                });
+                
+                this.addEventListener('error', function() {
+                    // Record error
+                    updateApiCallError(xhr._apiInspectorUrl, 'Network error');
+                });
+                
+                return originalXhrSend.apply(this, arguments);
+            };
+        }
+
+        // Placeholder functions for recording API calls
+        function recordApiCall(type, url, options) {
+            console.log('API Call Recorded:', type, url, options);
+            // Implementation to add request to the UI would go here
+        }
+        
+        function updateApiCall(url, response) {
+            console.log('API Response Recorded:', url, response);
+            // Implementation to update request with response in the UI would go here
+        }
+        
+        function updateApiCallError(url, error) {
+            console.log('API Error Recorded:', url, error);
