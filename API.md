@@ -2155,3 +2155,12 @@ mock example:
     "subData": null,
     "params": null
 }
+
+
+
+API: POST - /admin-api/admin-monitor/sensitive-info/confirm-sensitive-request
+
+Payload : 
+{
+    "feignRequestUrl":"POST http://appealapi/riskFraud/admin/detail","scannedSensitiveFieldPath":"$.infoVo.coin","confirmedSensitiveFieldPath":"$.infoVo.coin","sensitiveKeywordType":"ASSET","status":2,"remark":null,"feignInvocationId":1547
+}

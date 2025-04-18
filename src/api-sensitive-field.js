@@ -1,261 +1,362 @@
 // src/api-sensitive-field.js
-import { Styles, getSvgIcon } from './styles.js';
+import { Styles } from './styles.js';
+import { confirmSensitiveRequest } from './utils/api.js';
 
 export class ApiSensitiveField extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.feignRequestUrl = '';
     this.fields = [];
+    this.feignRequestUrl = '';
+    
+    // 字段状态配置
+    this.statusConfig = {
+      0: { name: 'Init', color: '#9CA3AF', bgColor: '#F3F4F6' },
+      1: { name: 'Confirmed', color: '#10B981', bgColor: '#ECFDF5' },
+      2: { name: 'Ignored', color: '#F59E0B', bgColor: '#FEF3C7' },
+      3: { name: 'Deleted', color: '#EF4444', bgColor: '#FEE2E2' }
+    };
+    
+    // 绑定方法
+    this._handleStatusChange = this._handleStatusChange.bind(this);
+    this._handleDropdownToggle = this._handleDropdownToggle.bind(this);
+    this._handleClickOutside = this._handleClickOutside.bind(this);
   }
   
   static get observedAttributes() {
-    return ['feign-request-url', 'fields'];
+    return ['fields', 'feign-request-url'];
   }
   
   attributeChangedCallback(name, oldValue, newValue) {
-    if (name === 'feign-request-url') {
-      this.feignRequestUrl = newValue;
-    } else if (name === 'fields') {
+    if (name === 'fields' && newValue) {
       try {
         this.fields = JSON.parse(newValue);
-      } catch (e) {
-        console.error('Invalid fields data:', e);
-        this.fields = [];
+        this.render();
+      } catch (error) {
+        console.error('解析字段数据失败:', error);
       }
     }
     
-    this.render();
+    if (name === 'feign-request-url' && newValue) {
+      this.feignRequestUrl = newValue;
+      this.render();
+    }
   }
   
   connectedCallback() {
+    document.addEventListener('click', this._handleClickOutside);
     this.render();
   }
   
+  disconnectedCallback() {
+    document.removeEventListener('click', this._handleClickOutside);
+  }
+  
   render() {
-    if (!this.feignRequestUrl) {
-      console.warn('No feignRequestUrl provided to ApiSensitiveField');
-      return;
-    }
-    
-    if (!this.fields || this.fields.length === 0) {
-      console.warn('No fields data available for URL:', this.feignRequestUrl);
-    } else {
-      console.log('渲染字段数据:', { url: this.feignRequestUrl, fields: this.fields });
-    }
-    
     this.shadowRoot.innerHTML = `
       <style>
         ${Styles.cssText}
         
-        .sensitive-group {
-          padding: 8px;
-          border-radius: 4px;
-          background-color: #FAFAFA;
-          margin-bottom: 8px;
+        .sensitive-field-container {
+          padding: 12px;
+          border-radius: 6px;
+          background-color: var(--panel-background);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          margin-bottom: 12px;
         }
         
-        .group-header {
-          padding: 8px 0;
-          margin-bottom: 8px;
-          border-bottom: 1px solid var(--border-color);
-        }
-        
-        .group-title {
-          font-weight: 600;
+        .url-title {
+          font-weight: 500;
+          margin-bottom: 10px;
           font-size: 14px;
-          color: var(--text-color);
+          color: var(--header-color);
+          word-break: break-all;
         }
         
-        .group-subtitle {
-          font-size: 12px;
-          color: #6B7280;
-          margin-top: 2px;
-        }
-        
-        .sensitive-field {
+        .field-item {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 8px;
-          border: 1px solid var(--border-color);
+          padding: 8px 10px;
           border-radius: 4px;
-          margin-bottom: 8px;
-          background-color: #FFFFFF;
-          transition: all 0.2s;
+          margin-bottom: 6px;
+          transition: background-color 0.2s;
+          border: 1px solid var(--border-color);
+          position: relative;
         }
         
-        .sensitive-field:last-child {
-          margin-bottom: 0;
-        }
-        
-        .sensitive-field.marked {
-          background-color: rgba(239, 68, 68, 0.05);
-          border-left: 3px solid var(--danger-color);
-        }
-        
-        .field-info {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
+        .field-item:hover {
+          background-color: #F9FAFB;
         }
         
         .field-path {
-          font-weight: 500;
+          font-family: 'Courier New', monospace;
           font-size: 13px;
+          flex-grow: 1;
+          margin-right: 8px;
+          user-select: all;
+          word-break: break-all;
         }
         
         .field-status {
-          font-size: 11px;
-          color: #6B7280;
-          margin-top: 2px;
-        }
-        
-        .status-confirmed {
-          color: var(--success-color);
-        }
-        
-        .status-pending {
-          color: var(--warning-color);
-        }
-        
-        .field-actions {
           display: flex;
-          gap: 6px;
+          align-items: center;
+          gap: 4px;
+          flex-shrink: 0;
         }
         
-        .field-actions button {
-          background: none;
-          border: none;
+        .status-badge {
+          padding: 3px 8px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 500;
+          text-transform: uppercase;
+        }
+        
+        .status-menu {
+          position: relative;
+          margin-left: 8px;
+        }
+        
+        .status-dot {
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background-color: #ccc;
+          position: relative;
           cursor: pointer;
-          padding: 4px;
-          border-radius: 4px;
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: background-color 0.2s;
         }
         
-        .field-actions button:hover {
+        .status-dot::after {
+          content: "⋮";
+          color: white;
+          font-weight: bold;
+          transform: rotate(90deg);
+        }
+        
+        .status-dropdown {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          min-width: 150px;
+          background-color: white;
+          border-radius: 4px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          z-index: 10;
+          display: none;
+        }
+        
+        .status-dropdown.show {
+          display: block;
+        }
+        
+        .status-option {
+          padding: 6px 12px;
+          font-size: 12px;
+          cursor: pointer;
+          transition: background-color 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .status-option:hover {
           background-color: #F3F4F6;
         }
         
-        .field-actions button.mark {
-          color: var(--danger-color);
+        .status-option:first-child {
+          border-top-left-radius: 4px;
+          border-top-right-radius: 4px;
         }
         
-        .field-actions button.unmark {
-          color: #6B7280;
+        .status-option:last-child {
+          border-bottom-left-radius: 4px;
+          border-bottom-right-radius: 4px;
         }
         
-        .field-actions button.filter {
-          color: var(--primary-color);
+        .status-color {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+        
+        .loading-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(255, 255, 255, 0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 4px;
+          z-index: 5;
+        }
+        
+        .spinner {
+          width: 20px;
+          height: 20px;
+          border: 2px solid #ccc;
+          border-top-color: var(--primary-color);
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
       </style>
       
-      <div class="sensitive-group">
-        <div class="group-header">
-          <div class="group-title">${this.feignRequestUrl}</div>
-          <div class="group-subtitle">包含 ${this.fields.length} 个敏感字段路径</div>
-        </div>
-        
-        <div class="fields-container">
-          ${this.fields.map(field => this._renderField(field)).join('')}
-        </div>
+      <div class="sensitive-field-container">
+        <div class="url-title">${this.feignRequestUrl}</div>
+        ${this.fields.map(field => this._renderField(field)).join('')}
       </div>
     `;
     
-    this.setupEventListeners();
-  }
-  
-  _renderField(field) {
-    const { id, path, status, isSensitive } = field;
-    const statusClass = status === 'CONFIRMED' ? 'status-confirmed' : 'status-pending';
-    const statusText = status === 'CONFIRMED' ? '已确认' : '待确认';
+    // 添加事件监听器
+    this.shadowRoot.querySelectorAll('.status-dot').forEach(dot => {
+      dot.addEventListener('click', this._handleDropdownToggle);
+    });
     
-    return `
-      <div class="sensitive-field ${isSensitive ? 'marked' : ''}" data-field-id="${id}">
-        <div class="field-info">
-          <div class="field-path">${path}</div>
-          <div class="field-status ${statusClass}">${statusText}</div>
-        </div>
-        <div class="field-actions">
-          ${isSensitive ? 
-            `<button class="unmark" title="取消敏感标记" data-action="toggle" data-field-id="${id}">
-              ${getSvgIcon('unmark')}
-            </button>` : 
-            `<button class="mark" title="标记为敏感" data-action="toggle" data-field-id="${id}">
-              ${getSvgIcon('mark')}
-            </button>`
-          }
-          <button class="filter" title="过滤此字段" data-action="filter" data-field-id="${id}">
-            ${getSvgIcon('filter')}
-          </button>
-        </div>
-      </div>
-    `;
-  }
-  
-  setupEventListeners() {
-    // 使用委托处理所有敏感字段的事件
-    this.shadowRoot.addEventListener('click', (e) => {
-      const button = e.target.closest('button');
-      if (!button) return;
-      
-      const fieldId = button.getAttribute('data-field-id');
-      const action = button.getAttribute('data-action');
-      
-      if (action === 'toggle') {
-        this._toggleSensitiveStatus(fieldId);
-      } else if (action === 'filter') {
-        this._filterField(fieldId);
-      }
+    this.shadowRoot.querySelectorAll('.status-option').forEach(option => {
+      option.addEventListener('click', this._handleStatusChange);
     });
   }
   
-  _toggleSensitiveStatus(fieldId) {
-    const field = this.fields.find(f => f.id === fieldId);
-    if (!field) return;
+  _renderField(field) {
+    const status = this.statusConfig[field.status] || this.statusConfig[0];
     
-    // 切换敏感状态
-    field.isSensitive = !field.isSensitive;
-    field.status = field.isSensitive ? 'CONFIRMED' : 'PENDING';
-    
-    // 通知父组件状态变化
-    this.dispatchEvent(new CustomEvent('sensitive-toggle', {
-      bubbles: true,
-      composed: true,
-      detail: { 
-        fieldId,
-        isSensitive: field.isSensitive,
-        path: field.path,
-        feignRequestUrl: this.feignRequestUrl
-      }
-    }));
-    
-    // 重新渲染
-    this.render();
+    return `
+      <div class="field-item" data-field-id="${field.id}">
+        <div class="field-path">${field.path}</div>
+        <div class="field-status">
+          <div class="status-badge" style="background-color: ${status.bgColor}; color: ${status.color};">
+            ${status.name}
+          </div>
+          <div class="status-menu">
+            <div class="status-dot" style="background-color: ${status.color};" data-field-id="${field.id}"></div>
+            <div class="status-dropdown" id="dropdown-${field.id}">
+              ${Object.entries(this.statusConfig).map(([statusId, statusData]) => `
+                <div class="status-option" data-field-id="${field.id}" data-status="${statusId}">
+                  <span class="status-color" style="background-color: ${statusData.color};"></span>
+                  <span>${statusData.name}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
   }
   
-  _filterField(fieldId) {
-    const field = this.fields.find(f => f.id === fieldId);
+  _handleDropdownToggle(event) {
+    const fieldId = event.currentTarget.getAttribute('data-field-id');
+    const dropdown = this.shadowRoot.getElementById(`dropdown-${fieldId}`);
+    
+    // 关闭所有其他下拉菜单
+    this.shadowRoot.querySelectorAll('.status-dropdown.show').forEach(el => {
+      if (el.id !== `dropdown-${fieldId}`) {
+        el.classList.remove('show');
+      }
+    });
+    
+    // 切换当前下拉菜单
+    dropdown.classList.toggle('show');
+    
+    // 阻止事件冒泡
+    event.stopPropagation();
+  }
+  
+  _handleClickOutside(event) {
+    // 检查事件源是否在shadowRoot之外
+    const path = event.composedPath();
+    if (!path.includes(this.shadowRoot)) {
+      // 关闭所有下拉菜单
+      this.shadowRoot.querySelectorAll('.status-dropdown.show').forEach(el => {
+        el.classList.remove('show');
+      });
+    }
+  }
+  
+  _handleStatusChange(event) {
+    const fieldId = event.currentTarget.getAttribute('data-field-id');
+    const newStatus = parseInt(event.currentTarget.getAttribute('data-status'));
+    
+    // 查找字段
+    const field = this.fields.find(f => f.id.toString() === fieldId);
     if (!field) return;
     
-    // 通知父组件过滤字段
-    this.dispatchEvent(new CustomEvent('field-filter', {
-      bubbles: true,
-      composed: true,
-      detail: { 
-        fieldId,
-        path: field.path,
-        feignRequestUrl: this.feignRequestUrl
-      }
-    }));
+    // 如果状态相同，不做任何操作
+    if (field.status === newStatus) {
+      // 关闭下拉菜单
+      this.shadowRoot.getElementById(`dropdown-${fieldId}`).classList.remove('show');
+      return;
+    }
     
-    // 显示提示
-    alert(`将过滤字段路径 "${field.path}"`);
+    // 添加加载状态
+    const fieldElement = this.shadowRoot.querySelector(`.field-item[data-field-id="${fieldId}"]`);
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.className = 'loading-overlay';
+    loadingOverlay.innerHTML = '<div class="spinner"></div>';
+    fieldElement.appendChild(loadingOverlay);
+    
+    // 构建请求数据
+    const requestData = {
+      id: field.id,
+      feignRequestUrl: this.feignRequestUrl,
+      scannedSensitiveFieldPath: field.path,
+      confirmedSensitiveFieldPath: field.path,
+      sensitiveKeywordType: 'USER', // 默认类型
+      status: newStatus,
+      feignInvocationId: field.original?.feignInvocationId || 0
+    };
+    
+    // 发送请求更新字段状态
+    confirmSensitiveRequest(requestData)
+      .then(response => {
+        console.log('字段状态更新成功:', response);
+        
+        // 更新本地状态
+        field.status = newStatus;
+        field.isSensitive = newStatus === 1; // Confirmed 状态
+        
+        // 触发刷新事件
+        this.dispatchEvent(new CustomEvent('refresh-sensitive-fields', {
+          bubbles: true,
+          composed: true,
+          detail: {
+            fieldId: field.id,
+            status: newStatus,
+            feignRequestUrl: this.feignRequestUrl
+          }
+        }));
+        
+        // 重新渲染
+        this.render();
+      })
+      .catch(error => {
+        console.error('更新字段状态失败:', error);
+        alert(`更新字段状态失败: ${error.message}`);
+      })
+      .finally(() => {
+        // 移除加载状态
+        if (fieldElement && loadingOverlay.parentNode === fieldElement) {
+          fieldElement.removeChild(loadingOverlay);
+        }
+        
+        // 关闭下拉菜单
+        const dropdown = this.shadowRoot.getElementById(`dropdown-${fieldId}`);
+        if (dropdown) {
+          dropdown.classList.remove('show');
+        }
+      });
   }
 }
 
-// Define custom element
+// 注册自定义元素
 customElements.define('api-sensitive-field', ApiSensitiveField);

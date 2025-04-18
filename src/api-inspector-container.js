@@ -122,6 +122,10 @@ export class ApiInspectorContainer extends HTMLElement {
           overflow-x: hidden;
         }
         
+        .footer-container {
+          flex-shrink: 0;
+        }
+        
         .container.dragging {
           opacity: 0.9;
           transition: none;
@@ -135,7 +139,9 @@ export class ApiInspectorContainer extends HTMLElement {
           <div class="api-list-container">
             <slot name="api-list"></slot>
           </div>
-          <slot name="footer"></slot>
+          <div class="footer-container">
+            <slot name="footer"></slot>
+          </div>
         </div>
       </div>
     `;

@@ -48,6 +48,16 @@ class ApiInspector extends HTMLElement {
   
   render() {
     this.shadowRoot.innerHTML = `
+    <style>
+    api-inspector-container {
+      opacity: 0.7;
+    }
+
+    api-inspector-container:hover {
+      opacity: 1;
+    }
+    </style>
+
       <api-inspector-container>
         <api-inspector-header slot="header"></api-inspector-header>
         <api-inspector-toolbar slot="toolbar"></api-inspector-toolbar>
