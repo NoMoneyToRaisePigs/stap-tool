@@ -289,7 +289,10 @@ export class ApiSensitiveField extends HTMLElement {
     
     // 查找字段
     const field = this.fields.find(f => f.id.toString() === fieldId);
-    if (!field) return;
+    if (!field) {
+      console.error('未找到字段ID:', fieldId);
+      return;
+    }
     
     // 如果状态相同，不做任何操作
     if (field.status === newStatus) {
@@ -305,16 +308,25 @@ export class ApiSensitiveField extends HTMLElement {
     loadingOverlay.innerHTML = '<div class="spinner"></div>';
     fieldElement.appendChild(loadingOverlay);
     
+    // 确保我们有原始数据
+    if (!field.original) {
+      console.error('字段缺少原始数据:', field);
+      fieldElement.removeChild(loadingOverlay);
+      return;
+    }
+    
     // 构建请求数据
     const requestData = {
       id: field.id,
       feignRequestUrl: this.feignRequestUrl,
-      scannedSensitiveFieldPath: field.path,
+      scannedSensitiveFieldPath: field.original.scannedSensitiveFieldPath || field.path,
       confirmedSensitiveFieldPath: field.path,
-      sensitiveKeywordType: 'USER', // 默认类型
+      sensitiveKeywordType: field.original.sensitiveKeywordType || 'USER',
       status: newStatus,
-      feignInvocationId: field.original?.feignInvocationId || 0
+      feignInvocationId: field.original.feignInvocationId || 0
     };
+    
+    console.log('发送状态更新请求:', requestData);
     
     // 发送请求更新字段状态
     confirmSensitiveRequest(requestData)
@@ -323,7 +335,6 @@ export class ApiSensitiveField extends HTMLElement {
         
         // 更新本地状态
         field.status = newStatus;
-        field.isSensitive = newStatus === 1; // Confirmed 状态
         
         // 触发刷新事件
         this.dispatchEvent(new CustomEvent('refresh-sensitive-fields', {

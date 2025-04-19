@@ -374,7 +374,9 @@ export class ApiSensitivePanel extends HTMLElement {
     fetchAccurateSensitiveFields(this.apiUrl)
       .then(data => {
         console.log('获取到敏感字段数据:', data);
-        this.aggregatedFields = this.processFieldsData(data);
+        // 数据已经在fetchAccurateSensitiveFields中通过aggregateSensitiveFields聚合过，
+        // 所以这里直接使用而不需要额外处理
+        this.aggregatedFields = data;
         this.loading = false;
         this.render();
         
@@ -389,7 +391,15 @@ export class ApiSensitivePanel extends HTMLElement {
       });
   }
   
+  // 该方法不再需要，但保留以便其他地方可能的调用
   processFieldsData(data) {
+    // 如果数据已经是聚合格式，直接返回
+    if (data.length > 0 && data[0].fields && data[0].feignRequestUrl) {
+      console.log('数据已经是聚合格式，不需要处理');
+      return data;
+    }
+    
+    console.log('处理原始字段数据为聚合格式');
     // 聚合及处理字段数据
     const processedData = [];
     const urlGroups = {};
@@ -443,7 +453,8 @@ export class ApiSensitivePanel extends HTMLElement {
     fetchAccurateSensitiveFields(this.apiUrl)
       .then(data => {
         console.log('刷新获取到敏感字段数据:', data);
-        this.aggregatedFields = this.processFieldsData(data);
+        // 数据已经在fetchAccurateSensitiveFields中通过aggregateSensitiveFields聚合过
+        this.aggregatedFields = data;
         this.render();
         
         // 显示刷新成功消息

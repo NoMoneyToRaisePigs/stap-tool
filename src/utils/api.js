@@ -2,7 +2,7 @@ function getCsrfHeader() {
     return window.localStorage?.getItem('csrfHeader') || 
         window.__GLOBAL_STORE__?.getters?.csrfHeader ||
         window.csrfHeader ||
-        window.getCsrfHeader() ||
+        window.getCsrfHeader?.() ||
         ''
 }
 
@@ -66,7 +66,7 @@ export function fetchSensitiveFieldsData(apiUrl) {
 export function fetchAccurateSensitiveFields(apiUrl) {
   console.log('调用敏感字段准确列表API，参考URL:', apiUrl);
   
-  return fetchSensitiveFieldsData(apiUrl)
+//   return fetchSensitiveFieldsData(apiUrl)
   // 模拟API调用
   return new Promise((resolve) => {
     // 模拟API响应数据
@@ -173,7 +173,7 @@ export function fetchAccurateSensitiveFields(apiUrl) {
     
     // 返回数据部分
     setTimeout(() => {
-      resolve(response.data);
+      resolve(aggregateSensitiveFields(response.data));
     }, 1000);
   });
 }
@@ -235,13 +235,6 @@ export function confirmSensitiveRequest(fieldData) {
 function aggregateSensitiveFields(data, apiUrl) {
   // 用于存储聚合后的结果
   const aggregated = [];
-  // An improved implementation of state code to labels mapping
-  const stateLabels = {
-    0: { name: 'Init', color: '#9CA3AF' },    // 灰色
-    1: { name: 'Confirmed', color: '#10B981' }, // 绿色
-    2: { name: 'Ignored', color: '#F59E0B' },  // 黄色
-    3: { name: 'Deleted', color: '#EF4444' }   // 红色
-  };
   // 用于跟踪已处理的feignRequestUrl
   const processedUrls = new Set();
   
@@ -288,8 +281,6 @@ function aggregateSensitiveFields(data, apiUrl) {
         id: d.id,
         path: d.confirmedSensitiveFieldPath,
         status: d.status,
-        stateLabel: stateLabels[d.status] || { name: 'Unknown', color: '#9CA3AF' },
-        isSensitive: d.status === 1, // Confirmed state
         // 保存原始数据以便更新时使用
         original: d
       });
