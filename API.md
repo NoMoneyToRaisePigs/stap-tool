@@ -1,5 +1,5 @@
 
-API: /admin-api/admin-monitor/sensitive-info/accurate-list-sensitive-request
+API:POST - /admin-api/admin-monitor/sensitive-info/accurate-list-sensitive-request
 {
   "code": "string",
   "data": [
@@ -2163,4 +2163,16 @@ API: POST - /admin-api/admin-monitor/sensitive-info/confirm-sensitive-request
 Payload : 
 {
     "feignRequestUrl":"POST http://appealapi/riskFraud/admin/detail","scannedSensitiveFieldPath":"$.infoVo.coin","confirmedSensitiveFieldPath":"$.infoVo.coin","sensitiveKeywordType":"ASSET","status":2,"remark":null,"feignInvocationId":1547
+}
+
+
+Response:
+{
+    "status": "OK",
+    "type": "GENERAL",
+    "code": "000000000",
+    "errorData": null,
+    "data": null,
+    "subData": null,
+    "params": null
 }

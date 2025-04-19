@@ -12,7 +12,7 @@ export default {
       file: 'dist/api-inspector.js',
       format: 'iife',
       name: 'ApiInspector',
-      sourcemap: !isProduction
+      sourcemap: true
     },
     // {
     //   file: 'dist/api-inspector.esm.js',
@@ -24,7 +24,9 @@ export default {
     resolve(),
     
     // 只在生产环境压缩代码
-    isProduction && terser(),
+    isProduction && terser({
+      sourceMap: true
+    }),
     
     // 开发服务器 - 仅在开发模式启用
     !isProduction && serve({
