@@ -1,3 +1,11 @@
+function getCsrfHeader() {
+    return window.localStorage?.getItem('csrfHeader') || 
+        window.__GLOBAL_STORE__?.getters?.csrfHeader ||
+        window.csrfHeader ||
+        window.getCsrfHeader() ||
+        ''
+}
+
 /**
  * 模拟获取敏感字段数据的API接口
  * @param {string} apiUrl - API URL
@@ -5,27 +13,48 @@
  */
 export function fetchSensitiveFieldsData(apiUrl) {
   console.log('fetchSensitiveFieldsData被调用，URL:', apiUrl);
+
+  const apiEndpoint = '/admin-api/admin-monitor/sensitive-info/accurate-list-sensitive-request';
   
-  return new Promise((resolve) => {
-    // 模拟1秒的API延迟
-    setTimeout(() => {
-      // 调用准确的敏感字段列表接口
-      fetchAccurateSensitiveFields(apiUrl)
-        .then(data => {
-          // 按照feignRequestUrl聚合数据
-          const aggregatedData = aggregateSensitiveFields(data, apiUrl);
-          
-          console.log('API返回聚合后的数据:', aggregatedData);
-          
-          // 确保总是返回一些数据，即使URL无匹配
-          if (aggregatedData.length === 0) {
-            console.log('未找到URL匹配的数据，返回所有数据');
-            resolve(aggregateSensitiveFields(data));
-          } else {
-            resolve(aggregatedData);
-          }
-        });
-    }, 1000);
+  // 发送真实的HTTP请求
+  return fetch(apiEndpoint, {
+    method: 'POST',
+    body: JSON.stringify({requestUrls: [apiUrl]}),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF': getCsrfHeader()
+    },
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(responseData => {
+    // 检查API响应格式
+    if (responseData.status !== 'OK' || !responseData.data) {
+      throw new Error(`API返回错误: ${responseData.status}, ${responseData.code}`);
+    }
+    
+    console.log('成功获取敏感字段数据:', responseData.data.length);
+    // 按照feignRequestUrl聚合数据
+
+    if(responseData.data) {
+        const aggregatedData = aggregateSensitiveFields(responseData.data, apiUrl);
+    
+        console.log('API返回聚合后的数据:', aggregatedData);
+            
+        return aggregatedData;
+    } else {
+        return []
+    }
+  })
+  .catch(error => {
+    console.error('API请求失败:', error);
+    // 如果请求失败，回退到模拟数据
+    console.warn('回退到模拟数据');
+    return error.message
   });
 }
 
@@ -37,6 +66,7 @@ export function fetchSensitiveFieldsData(apiUrl) {
 export function fetchAccurateSensitiveFields(apiUrl) {
   console.log('调用敏感字段准确列表API，参考URL:', apiUrl);
   
+  return fetchSensitiveFieldsData(apiUrl)
   // 模拟API调用
   return new Promise((resolve) => {
     // 模拟API响应数据
@@ -142,7 +172,9 @@ export function fetchAccurateSensitiveFields(apiUrl) {
     };
     
     // 返回数据部分
-    resolve(response.data);
+    setTimeout(() => {
+      resolve(response.data);
+    }, 1000);
   });
 }
 
@@ -162,23 +194,35 @@ export function confirmSensitiveRequest(fieldData) {
     }
   }
   
-  // 模拟API调用
-  return new Promise((resolve) => {
-    // 延迟模拟网络请求
-    setTimeout(() => {
-      // 模拟成功响应
-      const response = {
-        "status": "OK",
-        "type": "GENERAL",
-        "code": "000000000",
-        "errorData": null,
-        "data": null,
-        "subData": null,
-        "params": null
-      };
-      
-      resolve(response);
-    }, 500);
+  // 发送真实的HTTP请求
+  const apiEndpoint = '/admin-api/admin-monitor/sensitive-info/confirm-sensitive-request';
+  
+  return fetch(apiEndpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF': getCsrfHeader()
+    },
+    body: JSON.stringify(fieldData)
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(responseData => {
+    // 检查API响应格式
+    if (responseData.status !== 'OK') {
+      throw new Error(`API返回错误: ${responseData.status}, ${responseData.code}`);
+    }
+    
+    console.log('成功更新敏感字段状态');
+    return responseData;
+  })
+  .catch(error => {
+    console.error('更新敏感字段状态失败:', error);
+    throw error;
   });
 }
 
