@@ -13,6 +13,7 @@ export class ApiInterceptor {
   
     interceptFetch() {
       const originalFetch = window.fetch;
+      const self = this; // 保存this引用
       window.__originalFetch = originalFetch;
       window.__interceptedFetch = this.createWrappedFetch(originalFetch);
   
@@ -25,7 +26,7 @@ export class ApiInterceptor {
         set(newFetch) {
           if (typeof newFetch === 'function') {
             window.__originalFetch = newFetch;
-            window.__interceptedFetch = this.createWrappedFetch(newFetch);
+            window.__interceptedFetch = self.createWrappedFetch(newFetch); // 使用保存的self引用
           }
         }
       });
