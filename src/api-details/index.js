@@ -3,9 +3,9 @@ import { Styles, getSvgIcon, getMethodClass, getStatusClass } from '@/styles/ind
 import './components/api-summary.js';
 import './components/request-headers-tab.js';
 import './components/response-headers-tab.js';
-import './components/api-sensitive-tab.js';
-import './components/api-sensitive-panel.js';
-import './components/api-sensitive-field.js';
+import './components/sensitive-tab.js';
+import './components/sensitive-panel.js';
+import './components/sensitive-field.js';
 
 export class ApiRequestItem extends HTMLElement {
   constructor() {
@@ -206,9 +206,10 @@ export class ApiRequestItem extends HTMLElement {
           </div>
           
           <div class="tab-content ${this.activeTab === 'sensitive' ? 'active' : ''}" data-content="sensitive">
-            <api-sensitive-tab id="sensitive-tab">
+
+            <sensitive-tab id="sensitive-tab">
               <div id="sensitive-panel-container" slot="sensitive-panel"></div>
-            </api-sensitive-tab>
+            </sensitive-tab>
           </div>
         </div>
       </div>
@@ -292,7 +293,7 @@ export class ApiRequestItem extends HTMLElement {
     if (!container) return;
     
     // 创建敏感字段面板
-    const sensitivePanel = document.createElement('api-sensitive-panel');
+    const sensitivePanel = document.createElement('sensitive-panel');
     sensitivePanel.setAttribute('api-url', this._request.url);
     
     // 添加到容器

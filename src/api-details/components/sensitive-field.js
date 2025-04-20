@@ -1,4 +1,4 @@
-// src/api-sensitive-field.js
+// src/sensitive-field.js
 import { Styles } from '@/styles/index.js';
 import { confirmSensitiveRequest } from '@/utils/api.js';
 
@@ -370,4 +370,4 @@ export class ApiSensitiveField extends HTMLElement {
 }
 
 // 注册自定义元素
-customElements.define('api-sensitive-field', ApiSensitiveField);
+customElements.define('sensitive-field', ApiSensitiveField);

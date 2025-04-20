@@ -23,4 +23,4 @@ export class ApiSensitiveTab extends HTMLElement {
   }
 }
 
-customElements.define('api-sensitive-tab', ApiSensitiveTab); 
+customElements.define('sensitive-tab', ApiSensitiveTab); 

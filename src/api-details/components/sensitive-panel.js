@@ -1,4 +1,4 @@
-// src/api-sensitive-panel.js
+// src/sensitive-panel.js
 import { Styles, getSvgIcon } from '@/styles/index.js';
 import { fetchAccurateSensitiveFields } from '@/utils/api.js';
 
@@ -302,10 +302,10 @@ export class ApiSensitivePanel extends HTMLElement {
       <div class="sensitive-list" id="sensitive-fields-list">
         ${this.aggregatedFields.map((group, index) => `
           <div class="field-group" data-url="${group.feignRequestUrl}">
-            <api-sensitive-field
+            <sensitive-field
               feign-request-url="${group.feignRequestUrl}"
               fields='${JSON.stringify(group.fields)}'
-            ></api-sensitive-field>
+            ></sensitive-field>
             ${index < this.aggregatedFields.length - 1 ? '<div class="section-divider"></div>' : ''}
           </div>
         `).join('')}
@@ -553,4 +553,4 @@ export class ApiSensitivePanel extends HTMLElement {
 }
 
 // Define custom element
-customElements.define('api-sensitive-panel', ApiSensitivePanel);
+customElements.define('sensitive-panel', ApiSensitivePanel);
