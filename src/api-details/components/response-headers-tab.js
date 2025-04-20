@@ -165,4 +165,4 @@ export class ApiResponseTab extends HTMLElement {
   }
 }
 
-customElements.define('api-response-tab', ApiResponseTab); 
+customElements.define('response-headers-tab', ApiResponseTab); 

@@ -185,4 +185,4 @@ export class ApiHeadersTab extends HTMLElement {
   }
 }
 
-customElements.define('api-headers-tab', ApiHeadersTab); 
+customElements.define('request-headers-tab', ApiHeadersTab); 
