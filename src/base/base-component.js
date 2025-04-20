@@ -1,4 +1,4 @@
-import { Styles } from './styles.js';
+import { Styles } from '../styles.js';
 
 /**
  * 简化的基础Web Component类
@@ -228,41 +228,5 @@ export class BaseComponent extends HTMLElement {
    */
   $$(selector) {
     return this.shadowRoot ? this.shadowRoot.querySelectorAll(selector) : this.querySelectorAll(selector);
-  }
-  
-  /**
-   * 获取属性值，带类型转换
-   * @param {string} name - 属性名
-   * @param {any} defaultValue - 默认值
-   * @return {any} 属性值
-   */
-  getTypedAttribute(name, defaultValue = null) {
-    const value = this.getAttribute(name);
-    if (value === null) return defaultValue;
-    
-    // 尝试转换为数字或布尔值
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    if (!isNaN(value) && value.trim() !== '') return Number(value);
-    
-    return value;
-  }
-  
-  /**
-   * 安全解析JSON属性
-   * @param {string} name - 属性名
-   * @param {any} defaultValue - 解析失败时的默认值
-   * @return {any} 解析后的值
-   */
-  getJSONAttribute(name, defaultValue = null) {
-    const value = this.getAttribute(name);
-    if (!value) return defaultValue;
-    
-    try {
-      return JSON.parse(value);
-    } catch (e) {
-      console.error(`解析属性 ${name} 失败:`, e);
-      return defaultValue;
-    }
   }
 } 

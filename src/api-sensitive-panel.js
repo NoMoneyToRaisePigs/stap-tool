@@ -43,6 +43,13 @@ export class ApiSensitivePanel extends HTMLElement {
   }
   
   connectedCallback() {
+    // 如果设置了API URL，自动开始加载数据
+    const apiUrl = this.getAttribute('api-url');
+    if (apiUrl && !this.apiUrl) {
+      this.apiUrl = apiUrl;
+      this.loadSensitiveFields();
+    }
+    
     this.render();
   }
   
@@ -350,7 +357,6 @@ export class ApiSensitivePanel extends HTMLElement {
     // 监听敏感字段组件的刷新事件
     this.shadowRoot.addEventListener('refresh-sensitive-fields', (e) => {
       const { fieldId, feignRequestUrl } = e.detail;
-      console.log(`接收到字段 ${fieldId} 的刷新请求，URL: ${feignRequestUrl}`);
       
       // 显示成功消息
       this.showToast('字段状态已更新', 'success');
@@ -363,17 +369,18 @@ export class ApiSensitivePanel extends HTMLElement {
   loadSensitiveFields() {
     if (!this.apiUrl) {
       console.error('No API URL provided to load sensitive fields');
+      this.error = '未提供API URL';
+      this.loading = false;
+      this.render();
       return;
     }
     
-    console.log('开始加载敏感字段数据:', this.apiUrl);
     this.loading = true;
     this.error = null;
     this.render();
     
     fetchAccurateSensitiveFields(this.apiUrl)
       .then(data => {
-        console.log('获取到敏感字段数据:', data);
         // 数据已经在fetchAccurateSensitiveFields中通过aggregateSensitiveFields聚合过，
         // 所以这里直接使用而不需要额外处理
         this.aggregatedFields = data;
@@ -436,8 +443,6 @@ export class ApiSensitivePanel extends HTMLElement {
       return;
     }
     
-    console.log('刷新敏感字段数据:', this.apiUrl);
-    
     // 获取列表容器
     const listContainer = this.shadowRoot.getElementById('sensitive-fields-list');
     if (listContainer) {
@@ -452,7 +457,6 @@ export class ApiSensitivePanel extends HTMLElement {
     
     fetchAccurateSensitiveFields(this.apiUrl)
       .then(data => {
-        console.log('刷新获取到敏感字段数据:', data);
         // 数据已经在fetchAccurateSensitiveFields中通过aggregateSensitiveFields聚合过
         this.aggregatedFields = data;
         this.render();
@@ -492,8 +496,6 @@ export class ApiSensitivePanel extends HTMLElement {
       });
     });
     
-    console.log('字段状态统计:', statusCounts);
-    
     this.dispatchEvent(new CustomEvent('sensitive-count-updated', {
       bubbles: true,
       composed: true,
@@ -518,9 +520,6 @@ export class ApiSensitivePanel extends HTMLElement {
         });
       });
     });
-    
-    // 输出到控制台
-    console.log('将保存以下敏感字段设置:', fieldsToUpdate);
     
     // 模拟一个成功操作
     setTimeout(() => {

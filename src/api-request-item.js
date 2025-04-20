@@ -1,5 +1,10 @@
 // src/api-request-item.js
 import { Styles, getSvgIcon, getMethodClass, getStatusClass } from './styles.js';
+import './api-details-tab.js';
+import './api-headers-tab.js';
+import './api-response-tab.js';
+import './api-sensitive-tab.js';
+import './api-sensitive-panel.js';
 
 export class ApiRequestItem extends HTMLElement {
   constructor() {
@@ -8,6 +13,7 @@ export class ApiRequestItem extends HTMLElement {
     this.expanded = false;
     this.activeTab = 'details';
     this._request = {};
+    this._sensitivePanelLoaded = false;
   }
   
   static get observedAttributes() {
@@ -46,7 +52,7 @@ export class ApiRequestItem extends HTMLElement {
   render() {
     if (!this._request || !this._request.url) return;
     
-    const { method, url, status, duration, timestamp, page } = this._request;
+    const { method, url, status } = this._request;
     const methodClass = getMethodClass(method);
     const statusClass = getStatusClass(status);
     const statusText = status || 'Error';
@@ -170,62 +176,6 @@ export class ApiRequestItem extends HTMLElement {
         .tab-content.active {
           display: block;
         }
-        
-        .property {
-          margin-bottom: 8px;
-        }
-        
-        .property-name {
-          font-weight: 500;
-          margin-bottom: 4px;
-          color: #4B5563;
-        }
-        
-        .property-value {
-          padding: 6px 8px;
-          background-color: #F3F4F6;
-          border-radius: 4px;
-          font-family: monospace;
-          overflow-x: auto;
-          white-space: pre-wrap;
-          max-height: 100px;
-          overflow-y: auto;
-        }
-        
-        .actions {
-          display: flex;
-          gap: 8px;
-          margin-top: 12px;
-        }
-        
-        .action {
-          padding: 6px 12px;
-          font-size: 12px;
-          border-radius: 4px;
-          border: none;
-          background-color: var(--panel-background);
-          border: 1px solid var(--border-color);
-          color: var(--text-color);
-          cursor: pointer;
-          transition: all 0.2s;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-        
-        .action:hover {
-          background-color: #F3F4F6;
-        }
-        
-        .action.primary {
-          background-color: var(--primary-color);
-          color: white;
-          border-color: var(--primary-color);
-        }
-        
-        .action.primary:hover {
-          background-color: var(--secondary-color);
-        }
       </style>
       
       <div class="request">
@@ -239,145 +189,48 @@ export class ApiRequestItem extends HTMLElement {
             <div class="tab ${this.activeTab === 'details' ? 'active' : ''}" data-tab="details">详情</div>
             <div class="tab ${this.activeTab === 'headers' ? 'active' : ''}" data-tab="headers">请求头</div>
             <div class="tab ${this.activeTab === 'response' ? 'active' : ''}" data-tab="response">响应头</div>
-            ${this._request.sensitivePanelActive ? `<div class="tab ${this.activeTab === 'sensitive' ? 'active' : ''}" data-tab="sensitive">敏感字段</div>` : ''}
+            <div class="tab ${this.activeTab === 'sensitive' ? 'active' : ''}" data-tab="sensitive">敏感字段</div>
           </div>
           
           <div class="tab-content ${this.activeTab === 'details' ? 'active' : ''}" data-content="details">
-            <div class="property">
-              <div class="property-name">URL</div>
-              <div class="property-value">${url}</div>
-            </div>
-            <div class="property">
-              <div class="property-name">方法</div>
-              <div class="property-value">${method}</div>
-            </div>
-            <div class="property">
-              <div class="property-name">状态码</div>
-              <div class="property-value">${status || 'N/A'}</div>
-            </div>
-            <div class="property">
-              <div class="property-name">页面</div>
-              <div class="property-value">${page || location.pathname}</div>
-            </div>
-            <div class="property">
-              <div class="property-name">时间戳</div>
-              <div class="property-value">${timestamp || new Date().toISOString()}</div>
-            </div>
-            <div class="property">
-              <div class="property-name">响应时间</div>
-              <div class="property-value">${duration ? duration.toFixed(2) + ' ms' : 'N/A'}</div>
-            </div>
-            
-            <div class="actions">
-              <button class="action" id="copy-btn">
-                ${getSvgIcon('export')}
-                复制
-              </button>
-              <button class="action primary" id="analyze-btn">
-                ${getSvgIcon('check')}
-                分析敏感字段
-              </button>
-            </div>
+            <api-details-tab id="details-tab"></api-details-tab>
           </div>
           
           <div class="tab-content ${this.activeTab === 'headers' ? 'active' : ''}" data-content="headers">
-            <div class="property">
-              <div class="property-name">请求头信息</div>
-              <div class="property-value">${this._formatHeaders()}</div>
-            </div>
+            <api-headers-tab id="headers-tab"></api-headers-tab>
           </div>
           
           <div class="tab-content ${this.activeTab === 'response' ? 'active' : ''}" data-content="response">
-            <div class="property">
-              <div class="property-name">响应头信息</div>
-              <div class="property-value">${this._formatResponse()}</div>
-            </div>
+            <api-response-tab id="response-tab"></api-response-tab>
           </div>
           
-          ${this._request.sensitivePanelActive ? `
-            <div class="tab-content ${this.activeTab === 'sensitive' ? 'active' : ''}" data-content="sensitive">
-              <slot name="sensitive-panel"></slot>
-            </div>
-          ` : ''}
+          <div class="tab-content ${this.activeTab === 'sensitive' ? 'active' : ''}" data-content="sensitive">
+            <api-sensitive-tab id="sensitive-tab">
+              <div id="sensitive-panel-container" slot="sensitive-panel"></div>
+            </api-sensitive-tab>
+          </div>
         </div>
       </div>
     `;
     
+    // 更新子组件的请求数据
+    this._updateTabComponents();
     this.setupEventListeners();
   }
   
-  _formatHeaders() {
-    const { headers, requestHeaders } = this._request;
+  _updateTabComponents() {
+    const detailsTab = this.shadowRoot.getElementById('details-tab');
+    const headersTab = this.shadowRoot.getElementById('headers-tab');
+    const responseTab = this.shadowRoot.getElementById('response-tab');
     
-    // 优先使用专门的requestHeaders字段
-    if (requestHeaders && typeof requestHeaders === 'object') {
-      let formattedHeaders = '';
-      for (const [key, value] of Object.entries(requestHeaders)) {
-        // 如果是认证信息，隐藏敏感内容
-        if (key.toLowerCase() === 'authorization') {
-          formattedHeaders += `${key}: ${value.split(' ')[0]} ${'*'.repeat(8)}\n`;
-        } else {
-          formattedHeaders += `${key}: ${value}\n`;
-        }
-      }
-      return formattedHeaders || 'No request headers available';
-    }
-    
-    // 兼容旧的headers格式，只在没有responseHeaders时作为请求头处理
-    if (headers && typeof headers === 'object' && !this._request.responseHeaders) {
-      let formattedHeaders = '';
-      for (const [key, value] of Object.entries(headers)) {
-        // 如果是认证信息，隐藏敏感内容
-        if (key.toLowerCase() === 'authorization') {
-          formattedHeaders += `${key}: ${value.split(' ')[0]} ${'*'.repeat(8)}\n`;
-        } else {
-          formattedHeaders += `${key}: ${value}\n`;
-        }
-      }
-      return formattedHeaders || 'No request headers available';
-    }
-    
-    return 'No request headers available';
-  }
-  
-  _formatResponse() {
-    const { responseData, responseHeaders } = this._request;
-    
-    // 优先使用responseHeaders字段
-    if (responseHeaders && typeof responseHeaders === 'object') {
-      let formattedHeaders = '';
-      for (const [key, value] of Object.entries(responseHeaders)) {
-        formattedHeaders += `${key}: ${value}\n`;
-      }
-      return formattedHeaders || 'No response headers available';
-    }
-    
-    // 兼容：如果没有responseHeaders但有headers，尝试用这个（旧版本拦截器）
-    if (this._request.headers && typeof this._request.headers === 'object') {
-      let formattedHeaders = '';
-      for (const [key, value] of Object.entries(this._request.headers)) {
-        formattedHeaders += `${key}: ${value}\n`;
-      }
-      return formattedHeaders || 'No response headers available';
-    }
-    
-    // 如果没有responseHeaders但有responseData，尝试从中提取headers
-    if (responseData && typeof responseData === 'object' && responseData.headers) {
-      let formattedHeaders = '';
-      for (const [key, value] of Object.entries(responseData.headers)) {
-        formattedHeaders += `${key}: ${value}\n`;
-      }
-      return formattedHeaders || 'No response headers available';
-    }
-    
-    return 'No response headers available';
+    if (detailsTab) detailsTab.request = this._request;
+    if (headersTab) headersTab.request = this._request;
+    if (responseTab) responseTab.request = this._request;
   }
   
   setupEventListeners() {
     const requestHeader = this.shadowRoot.getElementById('request-header');
     const tabs = this.shadowRoot.querySelectorAll('.tab');
-    const copyBtn = this.shadowRoot.getElementById('copy-btn');
-    const analyzeBtn = this.shadowRoot.getElementById('analyze-btn');
     
     if (requestHeader) {
       requestHeader.addEventListener('click', () => {
@@ -390,23 +243,15 @@ export class ApiRequestItem extends HTMLElement {
       tabs.forEach(tab => {
         tab.addEventListener('click', (e) => {
           e.stopPropagation();
-          this.activeTab = tab.getAttribute('data-tab');
+          const tabName = tab.getAttribute('data-tab');
+          this.activeTab = tabName;
           this._updateActiveTab();
+          
+          // 当点击敏感字段标签页并且尚未加载过敏感面板时，加载敏感字段数据
+          if (tabName === 'sensitive' && !this._sensitivePanelLoaded) {
+            this._loadSensitivePanel();
+          }
         });
-      });
-    }
-    
-    if (copyBtn) {
-      copyBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this._copyRequestDetails();
-      });
-    }
-    
-    if (analyzeBtn) {
-      analyzeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this._analyzeSensitiveData();
       });
     }
   }
@@ -439,50 +284,22 @@ export class ApiRequestItem extends HTMLElement {
     });
   }
   
-  _copyRequestDetails() {
-    const details = {
-      method: this._request.method,
-      url: this._request.url,
-      status: this._request.status,
-      duration: this._request.duration,
-      headers: this._request.headers,
-      responseData: this._request.responseData
-    };
+  _loadSensitivePanel() {
+    if (!this._request.url) return;
     
-    navigator.clipboard.writeText(JSON.stringify(details, null, 2))
-      .then(() => {
-        // 可以添加复制成功的提示
-        alert('请求详情已复制到剪贴板');
-      })
-      .catch(err => {
-        console.error('复制失败:', err);
-      });
-  }
-  
-  _analyzeSensitiveData() {
-    console.log('分析敏感字段开始:', this._request.url);
+    const container = this.shadowRoot.getElementById('sensitive-panel-container');
+    if (!container) return;
     
-    // 添加敏感字段标签
-    if (!this._request.sensitivePanelActive) {
-      this._request.sensitivePanelActive = true;
-      this.render();
-    }
+    // 创建敏感字段面板
+    const sensitivePanel = document.createElement('api-sensitive-panel');
+    sensitivePanel.setAttribute('api-url', this._request.url);
     
-    // 触发敏感字段分析
-    console.log('触发analyze-sensitive事件');
-    this.dispatchEvent(new CustomEvent('analyze-sensitive', {
-      bubbles: true,
-      composed: true,
-      detail: { 
-        request: this._request,
-        apiUrl: this._request.url
-      }
-    }));
+    // 添加到容器
+    container.innerHTML = '';
+    container.appendChild(sensitivePanel);
     
-    // 自动切换到敏感字段标签
-    this.activeTab = 'sensitive';
-    this._updateActiveTab();
-    console.log('已切换到敏感字段标签');
+    // 标记已加载
+    this._sensitivePanelLoaded = true;
   }
 }
 
