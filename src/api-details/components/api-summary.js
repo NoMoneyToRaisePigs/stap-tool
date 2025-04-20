@@ -1,7 +1,12 @@
-export class ApiDetailsTab extends HTMLElement {
+import { BaseComponent } from '../../base/base-component.js';
+
+export class ApiDetailsTab extends BaseComponent {
+  static get props() {
+    return [];
+  }
+
   constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
+    super(true); // 使用Shadow DOM
     this._request = {};
   }
 
@@ -14,39 +19,37 @@ export class ApiDetailsTab extends HTMLElement {
     return this._request;
   }
 
-  connectedCallback() {
-    this.render();
+  get css() {
+    return `
+      .property {
+        margin-bottom: 8px;
+      }
+      
+      .property-name {
+        font-weight: 500;
+        margin-bottom: 4px;
+        color: #4B5563;
+      }
+      
+      .property-value {
+        padding: 6px 8px;
+        background-color: #F3F4F6;
+        border-radius: 4px;
+        font-family: monospace;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        max-height: 100px;
+        overflow-y: auto;
+      }
+    `;
   }
 
-  render() {
-    if (!this._request || !this._request.url) return;
+  get html() {
+    if (!this._request || !this._request.url) return '';
 
     const { url, method, status, page, timestamp, duration } = this._request;
 
-    this.shadowRoot.innerHTML = `
-      <style>
-        .property {
-          margin-bottom: 8px;
-        }
-        
-        .property-name {
-          font-weight: 500;
-          margin-bottom: 4px;
-          color: #4B5563;
-        }
-        
-        .property-value {
-          padding: 6px 8px;
-          background-color: #F3F4F6;
-          border-radius: 4px;
-          font-family: monospace;
-          overflow-x: auto;
-          white-space: pre-wrap;
-          max-height: 100px;
-          overflow-y: auto;
-        }
-      </style>
-      
+    return `
       <div class="details-container">
         <div class="property">
           <div class="property-name">URL</div>
@@ -77,4 +80,4 @@ export class ApiDetailsTab extends HTMLElement {
   }
 }
 
-customElements.define('api-details-tab', ApiDetailsTab); 
+customElements.define('api-summary', ApiDetailsTab); 

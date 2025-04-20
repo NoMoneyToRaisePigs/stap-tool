@@ -21,6 +21,10 @@ export class ApiResponseTab extends HTMLElement {
   render() {
     if (!this._request) return;
 
+    // 格式化响应头
+    const responseContent = this._formatResponse();
+    const showEmptyState = responseContent === 'No response headers available';
+
     this.shadowRoot.innerHTML = `
       <style>
         .property {
@@ -43,12 +47,48 @@ export class ApiResponseTab extends HTMLElement {
           max-height: 300px;
           overflow-y: auto;
         }
+        
+        .empty-state {
+          text-align: center;
+          padding: 16px;
+          color: #6B7280;
+          background-color: #F9FAFB;
+          border-radius: 4px;
+          margin: 8px 0;
+        }
+        
+        .empty-state svg {
+          width: 24px;
+          height: 24px;
+          margin-bottom: 8px;
+          color: #9CA3AF;
+        }
+        
+        .empty-state p {
+          margin: 4px 0;
+        }
+        
+        .hint {
+          font-size: 12px;
+          color: #9CA3AF;
+          margin-top: 8px;
+        }
       </style>
       
       <div class="response-container">
         <div class="property">
           <div class="property-name">响应头信息</div>
-          <div class="property-value">${this._formatResponse()}</div>
+          ${showEmptyState ? `
+            <div class="empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p>暂未捕获到响应头信息</p>
+              <p class="hint">当前拦截器可能未正确捕获响应头信息<br>某些响应头可能因为CORS限制而无法获取</p>
+            </div>
+          ` : `
+            <div class="property-value">${responseContent}</div>
+          `}
         </div>
       </div>
     `;
@@ -57,31 +97,68 @@ export class ApiResponseTab extends HTMLElement {
   _formatResponse() {
     const { responseData, responseHeaders } = this._request;
     
+    // 增加调试日志，查看响应数据
+    console.log('响应数据分析:', {
+      hasResponseHeaders: !!responseHeaders,
+      responseHeadersType: responseHeaders ? typeof responseHeaders : 'undefined',
+      hasHeaders: !!this._request.headers,
+      hasResponseData: !!responseData,
+      responseDataType: responseData ? typeof responseData : 'undefined'
+    });
+    
     // 优先使用responseHeaders字段
     if (responseHeaders && typeof responseHeaders === 'object') {
-      let formattedHeaders = '';
-      for (const [key, value] of Object.entries(responseHeaders)) {
-        formattedHeaders += `${key}: ${value}\n`;
+      // 检查responseHeaders对象是否有内容
+      const entries = Object.entries(responseHeaders);
+      if (entries.length > 0) {
+        let formattedHeaders = '';
+        for (const [key, value] of entries) {
+          formattedHeaders += `${key}: ${value}\n`;
+        }
+        return formattedHeaders;
       }
-      return formattedHeaders || 'No response headers available';
     }
     
     // 兼容：如果没有responseHeaders但有headers，尝试用这个（旧版本拦截器）
     if (this._request.headers && typeof this._request.headers === 'object') {
-      let formattedHeaders = '';
-      for (const [key, value] of Object.entries(this._request.headers)) {
-        formattedHeaders += `${key}: ${value}\n`;
+      // 检查headers对象是否有内容
+      const entries = Object.entries(this._request.headers);
+      if (entries.length > 0) {
+        let formattedHeaders = '';
+        for (const [key, value] of entries) {
+          formattedHeaders += `${key}: ${value}\n`;
+        }
+        return formattedHeaders;
       }
-      return formattedHeaders || 'No response headers available';
     }
     
     // 如果没有responseHeaders但有responseData，尝试从中提取headers
-    if (responseData && typeof responseData === 'object' && responseData.headers) {
-      let formattedHeaders = '';
-      for (const [key, value] of Object.entries(responseData.headers)) {
-        formattedHeaders += `${key}: ${value}\n`;
+    if (responseData && typeof responseData === 'object') {
+      // 检查是否有headers属性
+      if (responseData.headers && typeof responseData.headers === 'object') {
+        const entries = Object.entries(responseData.headers);
+        if (entries.length > 0) {
+          let formattedHeaders = '';
+          for (const [key, value] of entries) {
+            formattedHeaders += `${key}: ${value}\n`;
+          }
+          return formattedHeaders;
+        }
       }
-      return formattedHeaders || 'No response headers available';
+      
+      // 某些API可能在其他地方包含headers信息
+      for (const key of ['header', 'headers', 'responseHeaders']) {
+        if (responseData[key] && typeof responseData[key] === 'object') {
+          const entries = Object.entries(responseData[key]);
+          if (entries.length > 0) {
+            let formattedHeaders = '';
+            for (const [headerKey, headerValue] of entries) {
+              formattedHeaders += `${headerKey}: ${headerValue}\n`;
+            }
+            return formattedHeaders;
+          }
+        }
+      }
     }
     
     return 'No response headers available';

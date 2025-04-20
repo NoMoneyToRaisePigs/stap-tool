@@ -1,6 +1,6 @@
-// src/api-request-item.js
+// src/api-detail.js
 import { Styles, getSvgIcon, getMethodClass, getStatusClass } from '@/styles/index.js';
-import './components/api-details-tab.js';
+import './components/api-summary.js';
 import './components/api-headers-tab.js';
 import './components/api-response-tab.js';
 import './components/api-sensitive-tab.js';
@@ -194,7 +194,7 @@ export class ApiRequestItem extends HTMLElement {
           </div>
           
           <div class="tab-content ${this.activeTab === 'details' ? 'active' : ''}" data-content="details">
-            <api-details-tab id="details-tab"></api-details-tab>
+            <api-summary id="details-tab"></api-summary>
           </div>
           
           <div class="tab-content ${this.activeTab === 'headers' ? 'active' : ''}" data-content="headers">
@@ -305,4 +305,4 @@ export class ApiRequestItem extends HTMLElement {
 }
 
 // Define custom element
-customElements.define('api-request-item', ApiRequestItem);
+customElements.define('api-detail', ApiRequestItem);

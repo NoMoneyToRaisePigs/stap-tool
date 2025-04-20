@@ -1,6 +1,7 @@
 // src/root.js
 import '@/styles/index.js';
-import './interceptor.js';
+// import './interceptor.js';
+import { ApiInterceptor } from './api-interceptor.js';
 
 import './layout/api-inspector-container.js';
 import './layout/api-inspector-header.js';
@@ -13,6 +14,8 @@ import './api-details/index.js';
 
 class ApiInspector extends HTMLElement {
   constructor() {
+    new ApiInterceptor();
+
     super();
     this.attachShadow({ mode: 'open' });
     this.requests = [];
@@ -83,7 +86,7 @@ class ApiInspector extends HTMLElement {
     }
     
     return this.requests.map((request, index) => `
-      <api-request-item id="request-${index}"></api-request-item>
+      <api-detail id="request-${index}"></api-detail>
     `).join('');
   }
   
@@ -148,7 +151,7 @@ class ApiInspector extends HTMLElement {
       } else {
         // 仅添加新元素到列表开头
         const newItemElement = document.createElement('div');
-        newItemElement.innerHTML = `<api-request-item id="request-0"></api-request-item>`;
+        newItemElement.innerHTML = `<api-detail id="request-0"></api-detail>`;
         
         // 将新元素插入到列表开头
         if (this.apiListContainer.firstChild) {
@@ -158,7 +161,7 @@ class ApiInspector extends HTMLElement {
         }
         
         // 更新所有现有项的ID
-        const items = this.apiListContainer.querySelectorAll('api-request-item');
+        const items = this.apiListContainer.querySelectorAll('api-detail');
         for (let i = 1; i < items.length; i++) {
           items[i].id = `request-${i}`;
         }
@@ -236,7 +239,7 @@ class ApiInspector extends HTMLElement {
     
     if (!searchTerm) {
       // 恢复所有请求项的显示
-      this.apiListContainer.querySelectorAll('api-request-item').forEach(item => {
+      this.apiListContainer.querySelectorAll('api-detail').forEach(item => {
         item.style.display = 'block';
       });
       return;
@@ -260,7 +263,7 @@ class ApiInspector extends HTMLElement {
     });
     
     // 检查是否存在匹配项
-    const visibleItems = Array.from(this.apiListContainer.querySelectorAll('api-request-item'))
+    const visibleItems = Array.from(this.apiListContainer.querySelectorAll('api-detail'))
       .filter(item => item.style.display !== 'none');
     
     // 更新搜索结果计数

@@ -1,4 +1,4 @@
-import { Styles } from '../styles.js';
+import { Styles } from '@//styles/index.js';
 
 /**
  * 简化的基础Web Component类
