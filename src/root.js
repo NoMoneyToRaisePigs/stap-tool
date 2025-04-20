@@ -1,18 +1,15 @@
 // src/root.js
 import './styles.js';
-import './api-inspector.js';
-import { ApiInterceptor } from './api-inspector.js'; 
+import './interceptor.js';
+
 import './api-inspector-container.js';
 import './api-inspector-header.js';
 import './api-inspector-toolbar.js';
-import './api-request-item.js';
-import './api-details-tab.js';
-import './api-headers-tab.js';
-import './api-response-tab.js';
-import './api-sensitive-tab.js';
-import './api-sensitive-field.js';
-import './api-sensitive-panel.js';
 import './api-inspector.footer.js';
+
+
+import './api-details/index.js';
+
 
 class ApiInspector extends HTMLElement {
   constructor() {
@@ -28,7 +25,6 @@ class ApiInspector extends HTMLElement {
     };
     
     this.render();
-    this.setupInterceptor();
     this.setupEventListeners();
   }
   
@@ -89,11 +85,6 @@ class ApiInspector extends HTMLElement {
     return this.requests.map((request, index) => `
       <api-request-item id="request-${index}"></api-request-item>
     `).join('');
-  }
-  
-  setupInterceptor() {
-    // 初始化API拦截器
-    const interceptor = new ApiInterceptor();
   }
   
   setupRequestListener() {

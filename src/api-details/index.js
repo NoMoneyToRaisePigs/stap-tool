@@ -1,10 +1,11 @@
 // src/api-request-item.js
-import { Styles, getSvgIcon, getMethodClass, getStatusClass } from './styles.js';
-import './api-details-tab.js';
-import './api-headers-tab.js';
-import './api-response-tab.js';
-import './api-sensitive-tab.js';
-import './api-sensitive-panel.js';
+import { Styles, getSvgIcon, getMethodClass, getStatusClass } from '../styles.js';
+import './components/api-details-tab.js';
+import './components/api-headers-tab.js';
+import './components/api-response-tab.js';
+import './components/api-sensitive-tab.js';
+import './components/api-sensitive-panel.js';
+import './components/api-sensitive-field.js';
 
 export class ApiRequestItem extends HTMLElement {
   constructor() {
