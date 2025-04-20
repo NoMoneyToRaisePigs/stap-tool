@@ -238,7 +238,7 @@ export class ApiRequestItem extends HTMLElement {
           <div class="tabs">
             <div class="tab ${this.activeTab === 'details' ? 'active' : ''}" data-tab="details">详情</div>
             <div class="tab ${this.activeTab === 'headers' ? 'active' : ''}" data-tab="headers">请求头</div>
-            <div class="tab ${this.activeTab === 'response' ? 'active' : ''}" data-tab="response">响应</div>
+            <div class="tab ${this.activeTab === 'response' ? 'active' : ''}" data-tab="response">响应头</div>
             ${this._request.sensitivePanelActive ? `<div class="tab ${this.activeTab === 'sensitive' ? 'active' : ''}" data-tab="sensitive">敏感字段</div>` : ''}
           </div>
           
@@ -246,6 +246,14 @@ export class ApiRequestItem extends HTMLElement {
             <div class="property">
               <div class="property-name">URL</div>
               <div class="property-value">${url}</div>
+            </div>
+            <div class="property">
+              <div class="property-name">方法</div>
+              <div class="property-value">${method}</div>
+            </div>
+            <div class="property">
+              <div class="property-name">状态码</div>
+              <div class="property-value">${status || 'N/A'}</div>
             </div>
             <div class="property">
               <div class="property-name">页面</div>
@@ -274,12 +282,14 @@ export class ApiRequestItem extends HTMLElement {
           
           <div class="tab-content ${this.activeTab === 'headers' ? 'active' : ''}" data-content="headers">
             <div class="property">
+              <div class="property-name">请求头信息</div>
               <div class="property-value">${this._formatHeaders()}</div>
             </div>
           </div>
           
           <div class="tab-content ${this.activeTab === 'response' ? 'active' : ''}" data-content="response">
             <div class="property">
+              <div class="property-name">响应头信息</div>
               <div class="property-value">${this._formatResponse()}</div>
             </div>
           </div>
@@ -297,43 +307,70 @@ export class ApiRequestItem extends HTMLElement {
   }
   
   _formatHeaders() {
-    const headers = this._request.headers || {};
-    let formattedHeaders = '';
+    const { headers, requestHeaders } = this._request;
     
-    for (const [key, value] of Object.entries(headers)) {
-      // 如果是认证信息，隐藏敏感内容
-      if (key.toLowerCase() === 'authorization') {
-        formattedHeaders += `${key}: ${value.split(' ')[0]} ${'*'.repeat(8)}\n`;
-      } else {
-        formattedHeaders += `${key}: ${value}\n`;
+    // 优先使用专门的requestHeaders字段
+    if (requestHeaders && typeof requestHeaders === 'object') {
+      let formattedHeaders = '';
+      for (const [key, value] of Object.entries(requestHeaders)) {
+        // 如果是认证信息，隐藏敏感内容
+        if (key.toLowerCase() === 'authorization') {
+          formattedHeaders += `${key}: ${value.split(' ')[0]} ${'*'.repeat(8)}\n`;
+        } else {
+          formattedHeaders += `${key}: ${value}\n`;
+        }
       }
+      return formattedHeaders || 'No request headers available';
     }
     
-    return formattedHeaders || 'No headers available';
+    // 兼容旧的headers格式，只在没有responseHeaders时作为请求头处理
+    if (headers && typeof headers === 'object' && !this._request.responseHeaders) {
+      let formattedHeaders = '';
+      for (const [key, value] of Object.entries(headers)) {
+        // 如果是认证信息，隐藏敏感内容
+        if (key.toLowerCase() === 'authorization') {
+          formattedHeaders += `${key}: ${value.split(' ')[0]} ${'*'.repeat(8)}\n`;
+        } else {
+          formattedHeaders += `${key}: ${value}\n`;
+        }
+      }
+      return formattedHeaders || 'No request headers available';
+    }
+    
+    return 'No request headers available';
   }
   
   _formatResponse() {
-    const { responseData } = this._request;
+    const { responseData, responseHeaders } = this._request;
     
-    if (!responseData) {
-      return 'No response data available';
-    }
-    
-    try {
-      if (typeof responseData === 'string') {
-        try {
-          // 尝试格式化JSON字符串
-          const json = JSON.parse(responseData);
-          return JSON.stringify(json, null, 2);
-        } catch (e) {
-          return responseData;
-        }
-      } else {
-        return JSON.stringify(responseData, null, 2);
+    // 优先使用responseHeaders字段
+    if (responseHeaders && typeof responseHeaders === 'object') {
+      let formattedHeaders = '';
+      for (const [key, value] of Object.entries(responseHeaders)) {
+        formattedHeaders += `${key}: ${value}\n`;
       }
-    } catch (e) {
-      return String(responseData);
+      return formattedHeaders || 'No response headers available';
     }
+    
+    // 兼容：如果没有responseHeaders但有headers，尝试用这个（旧版本拦截器）
+    if (this._request.headers && typeof this._request.headers === 'object') {
+      let formattedHeaders = '';
+      for (const [key, value] of Object.entries(this._request.headers)) {
+        formattedHeaders += `${key}: ${value}\n`;
+      }
+      return formattedHeaders || 'No response headers available';
+    }
+    
+    // 如果没有responseHeaders但有responseData，尝试从中提取headers
+    if (responseData && typeof responseData === 'object' && responseData.headers) {
+      let formattedHeaders = '';
+      for (const [key, value] of Object.entries(responseData.headers)) {
+        formattedHeaders += `${key}: ${value}\n`;
+      }
+      return formattedHeaders || 'No response headers available';
+    }
+    
+    return 'No response headers available';
   }
   
   setupEventListeners() {

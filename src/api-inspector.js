@@ -38,6 +38,7 @@ export class ApiInterceptor {
         const start = performance.now();
         let timestamp = new Date().toISOString();
         let requestData = null;
+        let requestHeaders = null;
         
         // 捕获请求体
         if (options && options.body) {
@@ -48,6 +49,15 @@ export class ApiInterceptor {
             }
           } catch (e) {
             requestData = options.body.toString();
+          }
+        }
+        
+        // 捕获请求头
+        if (options && options.headers) {
+          if (options.headers instanceof Headers) {
+            requestHeaders = Object.fromEntries([...options.headers.entries()]);
+          } else if (typeof options.headers === 'object') {
+            requestHeaders = options.headers;
           }
         }
         
@@ -68,6 +78,9 @@ export class ApiInterceptor {
             }
           }
           
+          // 捕获响应头
+          const responseHeaders = res.headers ? Object.fromEntries([...res.headers.entries()]) : {};
+          
           window.dispatchEvent(new CustomEvent('plugin-api-captured', {
             detail: {
               url: url instanceof Request ? url.url : url,
@@ -78,7 +91,8 @@ export class ApiInterceptor {
               page: location.pathname,
               requestData,
               responseData,
-              headers: res.headers ? Object.fromEntries([...res.headers.entries()]) : {}
+              requestHeaders,
+              responseHeaders
             }
           }));
           
@@ -95,7 +109,8 @@ export class ApiInterceptor {
               duration: end - start,
               timestamp,
               page: location.pathname,
-              requestData
+              requestData,
+              requestHeaders
             }
           }));
           
@@ -142,7 +157,15 @@ export class ApiInterceptor {
           }
         }
         
+        // 捕获请求头
+        const requestHeaders = {};
+        if (this.setRequestHeader) {
+          // 不幸的是，我们无法直接访问XHR的请求头
+          // 这部分需要更高级的拦截方法才能捕获
+        }
+        
         this._apiTrackerInfo.requestData = requestData;
+        this._apiTrackerInfo.requestHeaders = requestHeaders;
         
         const onLoadEnd = () => {
           const end = performance.now();
@@ -164,8 +187,8 @@ export class ApiInterceptor {
             responseData = 'Unable to capture response body';
           }
           
-          // 获取headers
-          const headers = {};
+          // 获取响应头
+          const responseHeaders = {};
           if (this.getAllResponseHeaders) {
             const headerString = this.getAllResponseHeaders();
             if (headerString) {
@@ -173,7 +196,7 @@ export class ApiInterceptor {
                 const parts = line.split(': ');
                 const header = parts.shift();
                 const value = parts.join(': ');
-                headers[header] = value;
+                responseHeaders[header] = value;
               });
             }
           }
@@ -184,7 +207,7 @@ export class ApiInterceptor {
               status: this.status,
               duration: end - start,
               responseData,
-              headers
+              responseHeaders
             }
           }));
         };

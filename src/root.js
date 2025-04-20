@@ -51,6 +51,7 @@ class ApiInspector extends HTMLElement {
     <style>
     api-inspector-container {
       opacity: 0.7;
+      z-index: 9999999;
     }
 
     api-inspector-container:hover {

@@ -66,116 +66,116 @@ export function fetchSensitiveFieldsData(apiUrl) {
 export function fetchAccurateSensitiveFields(apiUrl) {
   console.log('调用敏感字段准确列表API，参考URL:', apiUrl);
   
-//   return fetchSensitiveFieldsData(apiUrl)
+  return fetchSensitiveFieldsData(apiUrl)
   // 模拟API调用
-  return new Promise((resolve) => {
-    // 模拟API响应数据
-    const response = {
-      "status": "OK",
-      "type": "GENERAL",
-      "code": "000000000",
-      "errorData": null,
-      "data": [
-        {
-          "id": 941,
-          "requestUrlId": 17643,
-          "requestUrl": "POST /user/binance/registration-type/get-edit-log",
-          "feignInvocationId": 6591,
-          "feignRequestUrl": "POST http://account-admin/account-admin/securitylog/getUserTypeChangeLog",
-          "scannedSensitiveFieldPath": "$.userTypeChangeLogVoList.userId",
-          "confirmedSensitiveFieldPath": "$.userTypeChangeLogVoList.userId",
-          "sensitiveKeyword": "userid",
-          "sensitiveKeywordType": "USER",
-          "status": 2,
-          "remark": null,
-          "dbCreateTime": 1723724964000,
-          "dbModifyTime": 1724093114000
-        },
-        {
-          "id": 547,
-          "requestUrlId": 4478,
-          "requestUrl": "POST /user/binance/query",
-          "feignInvocationId": 3050,
-          "feignRequestUrl": "POST http://account-admin/account-admin/user-helper/searchUserList",
-          "scannedSensitiveFieldPath": "$.searchUserList.userId",
-          "confirmedSensitiveFieldPath": "$.searchUserList.userId",
-          "sensitiveKeyword": "userid",
-          "sensitiveKeywordType": "USER",
-          "status": 0,
-          "remark": null,
-          "dbCreateTime": 1723724961000,
-          "dbModifyTime": 1723724961000
-        },
-        {
-          "id": 660,
-          "requestUrlId": 18222,
-          "requestUrl": "POST /user/binance/changeEmail",
-          "feignInvocationId": 3897,
-          "feignRequestUrl": "POST http://account-admin/account-admin/user-helper/searchUserListV2",
-          "scannedSensitiveFieldPath": "$.searchUserList.userId",
-          "confirmedSensitiveFieldPath": "$.searchUserList.userId",
-          "sensitiveKeyword": "userid",
-          "sensitiveKeywordType": "USER",
-          "status": 1,
-          "remark": null,
-          "dbCreateTime": 1723724962000,
-          "dbModifyTime": 1728370767000
-        },
-        {
-          "id": 772,
-          "requestUrlId": 14002,
-          "requestUrl": "POST /user/binance/accountoauth/doBackendUnBindThreeParty",
-          "feignInvocationId": 5571,
-          "feignRequestUrl": "POST http://account-admin/account-admin/user/accountoauth/selectUserBindThreeParty",
-          "scannedSensitiveFieldPath": "$.userId",
-          "confirmedSensitiveFieldPath": "$.userId",
-          "sensitiveKeyword": "userid",
-          "sensitiveKeywordType": "USER",
-          "status": 0,
-          "remark": null,
-          "dbCreateTime": 1723724963000,
-          "dbModifyTime": 1723724963000
-        },
-        {
-          "id": 888,
-          "requestUrlId": 18222,
-          "requestUrl": "POST /user/binance/changeEmail",
-          "feignInvocationId": 6335,
-          "feignRequestUrl": "POST http://account-admin/account-admin/user/getUserById",
-          "scannedSensitiveFieldPath": "$.user.userId",
-          "confirmedSensitiveFieldPath": "$.user.userId",
-          "sensitiveKeyword": "userid",
-          "sensitiveKeywordType": "USER",
-          "status": 1,
-          "remark": "confirmed",
-          "dbCreateTime": 1723724964000,
-          "dbModifyTime": 1724132384000
-        },
-        {
-          "id": 127,
-          "requestUrlId": 4477,
-          "requestUrl": "POST /user/binance/modify",
-          "feignInvocationId": 524,
-          "feignRequestUrl": "POST http://account-api/account/unbindDevice",
-          "scannedSensitiveFieldPath": "$.userId",
-          "confirmedSensitiveFieldPath": "$.userId",
-          "sensitiveKeyword": "userid",
-          "sensitiveKeywordType": "USER",
-          "status": 3,
-          "remark": null,
-          "dbCreateTime": 1723724960000,
-          "dbModifyTime": 1724063074000
-        }
-      ],
-      "subData": null,
-      "params": null
-    };
+//   return new Promise((resolve) => {
+//     // 模拟API响应数据
+//     const response = {
+//       "status": "OK",
+//       "type": "GENERAL",
+//       "code": "000000000",
+//       "errorData": null,
+//       "data": [
+//         {
+//           "id": 941,
+//           "requestUrlId": 17643,
+//           "requestUrl": "POST /user/binance/registration-type/get-edit-log",
+//           "feignInvocationId": 6591,
+//           "feignRequestUrl": "POST http://account-admin/account-admin/securitylog/getUserTypeChangeLog",
+//           "scannedSensitiveFieldPath": "$.userTypeChangeLogVoList.userId",
+//           "confirmedSensitiveFieldPath": "$.userTypeChangeLogVoList.userId",
+//           "sensitiveKeyword": "userid",
+//           "sensitiveKeywordType": "USER",
+//           "status": 2,
+//           "remark": null,
+//           "dbCreateTime": 1723724964000,
+//           "dbModifyTime": 1724093114000
+//         },
+//         {
+//           "id": 547,
+//           "requestUrlId": 4478,
+//           "requestUrl": "POST /user/binance/query",
+//           "feignInvocationId": 3050,
+//           "feignRequestUrl": "POST http://account-admin/account-admin/user-helper/searchUserList",
+//           "scannedSensitiveFieldPath": "$.searchUserList.userId",
+//           "confirmedSensitiveFieldPath": "$.searchUserList.userId",
+//           "sensitiveKeyword": "userid",
+//           "sensitiveKeywordType": "USER",
+//           "status": 0,
+//           "remark": null,
+//           "dbCreateTime": 1723724961000,
+//           "dbModifyTime": 1723724961000
+//         },
+//         {
+//           "id": 660,
+//           "requestUrlId": 18222,
+//           "requestUrl": "POST /user/binance/changeEmail",
+//           "feignInvocationId": 3897,
+//           "feignRequestUrl": "POST http://account-admin/account-admin/user-helper/searchUserListV2",
+//           "scannedSensitiveFieldPath": "$.searchUserList.userId",
+//           "confirmedSensitiveFieldPath": "$.searchUserList.userId",
+//           "sensitiveKeyword": "userid",
+//           "sensitiveKeywordType": "USER",
+//           "status": 1,
+//           "remark": null,
+//           "dbCreateTime": 1723724962000,
+//           "dbModifyTime": 1728370767000
+//         },
+//         {
+//           "id": 772,
+//           "requestUrlId": 14002,
+//           "requestUrl": "POST /user/binance/accountoauth/doBackendUnBindThreeParty",
+//           "feignInvocationId": 5571,
+//           "feignRequestUrl": "POST http://account-admin/account-admin/user/accountoauth/selectUserBindThreeParty",
+//           "scannedSensitiveFieldPath": "$.userId",
+//           "confirmedSensitiveFieldPath": "$.userId",
+//           "sensitiveKeyword": "userid",
+//           "sensitiveKeywordType": "USER",
+//           "status": 0,
+//           "remark": null,
+//           "dbCreateTime": 1723724963000,
+//           "dbModifyTime": 1723724963000
+//         },
+//         {
+//           "id": 888,
+//           "requestUrlId": 18222,
+//           "requestUrl": "POST /user/binance/changeEmail",
+//           "feignInvocationId": 6335,
+//           "feignRequestUrl": "POST http://account-admin/account-admin/user/getUserById",
+//           "scannedSensitiveFieldPath": "$.user.userId",
+//           "confirmedSensitiveFieldPath": "$.user.userId",
+//           "sensitiveKeyword": "userid",
+//           "sensitiveKeywordType": "USER",
+//           "status": 1,
+//           "remark": "confirmed",
+//           "dbCreateTime": 1723724964000,
+//           "dbModifyTime": 1724132384000
+//         },
+//         {
+//           "id": 127,
+//           "requestUrlId": 4477,
+//           "requestUrl": "POST /user/binance/modify",
+//           "feignInvocationId": 524,
+//           "feignRequestUrl": "POST http://account-api/account/unbindDevice",
+//           "scannedSensitiveFieldPath": "$.userId",
+//           "confirmedSensitiveFieldPath": "$.userId",
+//           "sensitiveKeyword": "userid",
+//           "sensitiveKeywordType": "USER",
+//           "status": 3,
+//           "remark": null,
+//           "dbCreateTime": 1723724960000,
+//           "dbModifyTime": 1724063074000
+//         }
+//       ],
+//       "subData": null,
+//       "params": null
+//     };
     
-    // 返回数据部分
-    setTimeout(() => {
-      resolve(aggregateSensitiveFields(response.data));
-    }, 1000);
-  });
+//     // 返回数据部分
+//     setTimeout(() => {
+//       resolve(aggregateSensitiveFields(response.data));
+//     }, 1000);
+//   });
 }
 
 /**
