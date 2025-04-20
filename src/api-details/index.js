@@ -1,5 +1,5 @@
 // src/api-request-item.js
-import { Styles, getSvgIcon, getMethodClass, getStatusClass } from '../styles.js';
+import { Styles, getSvgIcon, getMethodClass, getStatusClass } from '@/styles/index.js';
 import './components/api-details-tab.js';
 import './components/api-headers-tab.js';
 import './components/api-response-tab.js';

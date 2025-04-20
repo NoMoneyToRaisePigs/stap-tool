@@ -1,6 +1,6 @@
 // src/api-sensitive-panel.js
-import { Styles, getSvgIcon } from '../../styles.js';
-import { fetchAccurateSensitiveFields } from '../../utils/api.js';
+import { Styles, getSvgIcon } from '@/styles/index.js';
+import { fetchAccurateSensitiveFields } from '@/utils/api.js';
 
 export class ApiSensitivePanel extends HTMLElement {
   constructor() {

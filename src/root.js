@@ -1,11 +1,11 @@
 // src/root.js
-import './styles.js';
+import '@/styles/index.js';
 import './interceptor.js';
 
-import './api-inspector-container.js';
-import './api-inspector-header.js';
-import './api-inspector-toolbar.js';
-import './api-inspector.footer.js';
+import './layout/api-inspector-container.js';
+import './layout/api-inspector-header.js';
+import './layout/api-inspector-toolbar.js';
+import './layout/api-inspector.footer.js';
 
 
 import './api-details/index.js';

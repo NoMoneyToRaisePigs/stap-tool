@@ -1,5 +1,5 @@
 // src/api-inspector-footer.js
-import { Styles, getSvgIcon } from './styles.js';
+import { Styles, getSvgIcon } from '@/styles/index.js';
 
 export class ApiInspectorFooter extends HTMLElement {
   constructor() {

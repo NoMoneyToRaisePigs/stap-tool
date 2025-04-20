@@ -1,6 +1,6 @@
 // src/api-sensitive-field.js
-import { Styles } from '../../styles.js';
-import { confirmSensitiveRequest } from '../../utils/api.js';
+import { Styles } from '@/styles/index.js';
+import { confirmSensitiveRequest } from '@/utils/api.js';
 
 export class ApiSensitiveField extends HTMLElement {
   constructor() {

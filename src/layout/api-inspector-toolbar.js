@@ -1,5 +1,5 @@
 // src/api-inspector-toolbar.js
-import { Styles, getSvgIcon } from './styles.js';
+import { Styles, getSvgIcon } from '@/styles/index.js';
 
 export class ApiInspectorToolbar extends HTMLElement {
   constructor() {
