@@ -50,6 +50,12 @@ class ApiInspector extends HTMLElement {
   
   render() {
     this.shadowRoot.innerHTML = `
+    <style>
+    api-inspector-container {
+      z-index: 9999999;
+    }
+    </style>
+
       <api-inspector-container>
         <api-inspector-header slot="header"></api-inspector-header>
         <api-inspector-toolbar slot="toolbar"></api-inspector-toolbar>
